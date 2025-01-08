@@ -1,5 +1,5 @@
 <?php
-require '/root/discord_bot/utilities/utilities.php';
+require '/root/big_manage/utilities/utilities.php';
 $token = get_keys_from_file(
     "discord_token"
 );
@@ -10,10 +10,10 @@ if ($token === null) {
 ini_set('memory_limit', '-1');
 require '/root/vendor/autoload.php';
 
-require '/root/discord_bot/utilities/sql.php';
-require '/root/discord_bot/utilities/communication.php';
-require '/root/discord_bot/utilities/evaluator.php';
-require '/root/discord_bot/utilities/AbstractMethodReply.php';
+require '/root/big_manage/utilities/sql.php';
+require '/root/big_manage/utilities/communication.php';
+require '/root/big_manage/utilities/evaluator.php';
+require '/root/big_manage/utilities/AbstractMethodReply.php';
 
 use Discord\Discord;
 use Discord\Parts\Channel\Message;
