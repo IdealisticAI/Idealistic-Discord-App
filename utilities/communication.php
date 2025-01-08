@@ -29,7 +29,7 @@ function load_previous_sql_database(): void
             null,
             null,
             true,
-            DiscordProperties::SYSTEM_REFRESH_TIME);
+            "5 minutes");
     } else {
         load_sql_database();
     }
