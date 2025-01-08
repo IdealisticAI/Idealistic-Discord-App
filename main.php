@@ -10,7 +10,6 @@ if ($token === null) {
 ini_set('memory_limit', '-1');
 require '/root/vendor/autoload.php';
 
-require '/root/discord_bot/utilities/memory/init.php';
 require '/root/discord_bot/utilities/sql.php';
 require '/root/discord_bot/utilities/communication.php';
 require '/root/discord_bot/utilities/evaluator.php';
