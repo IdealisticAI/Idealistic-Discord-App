@@ -54,6 +54,17 @@ $discord->on('ready', function (Discord $discord) {
             || $user->id === $discord->id) {
             return;
         }
+        if (true) {
+            $user->getPrivateChannel()->done(function ($channel) use ($discord, $user) {
+                $channel->getMessageHistory([])->done(function ($messages) use ($discord, $user) {
+                    foreach ($messages as $message) {
+                        if ($message->author->id === $discord->id) {
+                            $message->delete();
+                        }
+                    }
+                });
+            });
+        }
         $account = new Account(Account::BIGMANAGE_APPLICATION_ID);
         $account = $account->getAccounts()->getAccountFromType(
             BigManageAccessPlatform::DISCORD,
