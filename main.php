@@ -13,7 +13,6 @@ require '/root/vendor/autoload.php';
 require '/root/big_manage/utilities/sql.php';
 require '/root/big_manage/utilities/communication.php';
 require '/root/big_manage/utilities/evaluator.php';
-require '/root/big_manage/utilities/AbstractMethodReply.php';
 
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
