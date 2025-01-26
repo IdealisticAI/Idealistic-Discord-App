@@ -110,7 +110,7 @@ $discord->on('ready', function (Discord $discord) {
             $message->reply(
                 MessageBuilder::new()->setContent(
                     BigManageStrings::translateMessage(
-                        BigManageGeneralMessage::NO_DISCORD_ACCOUNT_CORRELATION_FOUND,
+                        BigManageGeneralMessage::PROMPT_WAIT_RESPONSE,
                         $team
                     )
                 )
@@ -133,29 +133,38 @@ $discord->on('ready', function (Discord $discord) {
                 );
             }
         }
-        $prompt = $user->createPrompt(
-            BigManageAccessPlatform::DISCORD,
-            $author->id,
-            $message->id,
-            $author->username,
-            $author->displayname,
-            $message->content,
-            $attachments,
-            true // todo
-        );
-
-        if (!$prompt->getOutcome()->isPositiveOutcome()) {
-            $message->reply(
-                MessageBuilder::new()->setContent(
-                    $prompt->getOutcome()->getTranslatedMessage($user)
+        $message->reply(
+            MessageBuilder::new()->setContent(
+                BigManageStrings::translateMessage(
+                    BigManageGeneralMessage::PROMPT_WAIT_RESPONSE,
+                    $user
                 )
+            )
+        )->done(function (Message $newMessage) use ($user, $author, $attachments, $message) {
+            $prompt = $user->createPrompt(
+                BigManageAccessPlatform::DISCORD,
+                $author->id,
+                $message->id,
+                $author->username,
+                $author->displayname,
+                $message->content,
+                $attachments,
+                true // todo
             );
-            return;
-        }
-        $reply = $prompt->getReply();
-        $builder = MessageBuilder::new();
-        $builder->setContent($reply->getOutcome()->getTranslatedMessage($user));
-        $message->reply($builder);
+
+            if (!$prompt->getOutcome()->isPositiveOutcome()) {
+                $newMessage->edit(
+                    MessageBuilder::new()->setContent(
+                        $prompt->getOutcome()->getTranslatedMessage($user)
+                    )
+                );
+                return;
+            }
+            $reply = $prompt->getReply();
+            $builder = MessageBuilder::new();
+            $builder->setContent($reply->getOutcome()->getTranslatedMessage($user));
+            $newMessage->edit($builder);
+        });
     });
 
 });
