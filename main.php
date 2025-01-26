@@ -117,6 +117,22 @@ $discord->on('ready', function (Discord $discord) {
             );
             return;
         }
+        $attachments = array();
+
+        if (!empty($message->attachments->first())) {
+            foreach ($message->attachments as $attachment) {
+                $attachments[] = new BigManageAttachment(
+                    $attachment->filename,
+                    $attachment->description,
+                    $attachment->content_type,
+                    $attachment->url,
+                    $attachment->size,
+                    $attachment->width,
+                    $attachment->height,
+                    null
+                );
+            }
+        }
         $prompt = $user->createPrompt(
             BigManageAccessPlatform::DISCORD,
             $author->id,
@@ -124,7 +140,7 @@ $discord->on('ready', function (Discord $discord) {
             $author->username,
             $author->displayname,
             $message->content,
-            array(), // todo
+            $attachments,
             true // todo
         );
 
