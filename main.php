@@ -48,15 +48,15 @@ $discord->on('ready', function (Discord $discord) {
     load_sql_database();
 
     $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) {
-        $user = $message->author;
+        $author = $message->author;
 
-        if ($user === null
-            || $user->id === $discord->id) {
+        if ($author === null
+            || $author->id === $discord->id) {
             return;
         }
         if (true) {
-            $user->getPrivateChannel()->done(function ($channel) use ($discord, $user) {
-                $channel->getMessageHistory([])->done(function ($messages) use ($discord, $user) {
+            $author->getPrivateChannel()->done(function ($channel) use ($discord, $author) {
+                $channel->getMessageHistory([])->done(function ($messages) use ($discord, $author) {
                     foreach ($messages as $message) {
                         if ($message->author->id === $discord->id) {
                             $message->delete();
@@ -68,7 +68,7 @@ $discord->on('ready', function (Discord $discord) {
         $account = new Account(Account::BIGMANAGE_APPLICATION_ID);
         $account = $account->getAccounts()->getAccountFromType(
             BigManageAccessPlatform::DISCORD,
-            $user->username
+            $author->username
         );
 
         if ($account === null) {
@@ -79,6 +79,66 @@ $discord->on('ready', function (Discord $discord) {
             );
             return;
         }
+        $team = new BigManageTeam($account);
+
+        if (!$team->hasEstablishedAccess()) {
+            if (empty($team->getAccesses())) {
+                MessageBuilder::new()->setContent(
+                    BigManageStrings::translateMessage(
+                        BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND,
+                        $team
+                    )
+                );
+            } else {
+                MessageBuilder::new()->setContent(
+                    BigManageStrings::translateMessage(
+                        BigManageGeneralMessage::DISCORD_SELECT_TEAM_ACCESSES,
+                        $team
+                    )
+                );
+            }
+            return;
+        }
+        $user = $team->findUser($account);
+
+        if ($user instanceof BigManageOutcome) {
+            $message->reply(
+                MessageBuilder::new()->setContent(
+                    $user->getTranslatedMessage($team)
+                )
+            );
+            return;
+        }
+        if (!($user instanceof BigManageUser)) {
+            $message->reply(
+                MessageBuilder::new()->setContent(
+                    BigManageStrings::translateMessage(
+                        BigManageGeneralMessage::NO_DISCORD_ACCOUNT_CORRELATION_FOUND,
+                        $team
+                    )
+                )
+            );
+            return;
+        }
+        $prompt = $user->createPrompt(
+            BigManageAccessPlatform::DISCORD,
+            $author->id,
+            $author->username,
+            $author->displayname,
+            $message->content,
+            array(), // todo
+            true // todo
+        );
+
+        if (!$prompt->getOutcome()->isPositiveOutcome()) {
+            $message->reply(
+                MessageBuilder::new()->setContent(
+                    $prompt->getOutcome()->getTranslatedMessage($user)
+                )
+            );
+            return;
+        }
+        $builder = MessageBuilder::new();
         $message->reply(
             MessageBuilder::new()->setContent(
                 json_encode($account->getObject())
