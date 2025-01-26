@@ -152,12 +152,10 @@ $discord->on('ready', function (Discord $discord) {
             );
             return;
         }
+        $reply = $prompt->getReply();
         $builder = MessageBuilder::new();
-        $message->reply(
-            MessageBuilder::new()->setContent(
-                json_encode($account->getObject())
-            )
-        );
+        $builder->setContent($reply->getOutcome()->getTranslatedMessage($user));
+        $message->reply($builder);
     });
 
 });
