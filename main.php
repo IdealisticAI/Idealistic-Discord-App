@@ -82,15 +82,16 @@ $discord->on('ready', function (Discord $discord) {
 
         if (!$team->hasEstablishedAccess()) {
             if (empty($team->getAccesses())) {
-                MessageBuilder::new()->setContent(
-                    BigManageStrings::translateMessage(
-                        BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND,
-                        $team
+                $message->reply(
+                    MessageBuilder::new()->setContent(
+                        BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND
                     )
                 );
             } else {
-                MessageBuilder::new()->setContent(
-                    BigManageGeneralMessage::DISCORD_SELECT_TEAM_ACCESSES // Do not translate due to command instructions
+                $message->reply(
+                    MessageBuilder::new()->setContent(
+                        BigManageGeneralMessage::DISCORD_SELECT_TEAM_ACCESSES
+                    )
                 );
             }
             return;
