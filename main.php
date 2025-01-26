@@ -90,10 +90,7 @@ $discord->on('ready', function (Discord $discord) {
                 );
             } else {
                 MessageBuilder::new()->setContent(
-                    BigManageStrings::translateMessage(
-                        BigManageGeneralMessage::DISCORD_SELECT_TEAM_ACCESSES,
-                        $team
-                    )
+                    BigManageGeneralMessage::DISCORD_SELECT_TEAM_ACCESSES // Do not translate due to command instructions
                 );
             }
             return;
