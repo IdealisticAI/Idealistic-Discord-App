@@ -17,6 +17,7 @@ require '/root/big_manage/utilities/evaluator.php';
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\Parts\Channel\Message;
+use Discord\Parts\User\Member;
 use Discord\WebSockets\Event;
 use Discord\WebSockets\Intents;
 
@@ -45,6 +46,25 @@ $discord = new Discord([
 
 $discord->on('ready', function (Discord $discord) {
     load_sql_database();
+
+    if (!empty($discord->guilds->first())) {
+        foreach ($discord->guilds as $guild) {
+            if (!empty($guild->members->first())) {
+                foreach ($guild->members as $member) {
+                    if ($member->id !== $discord->id
+                        && !$member->getPermissions()?->administrator
+                        && $member->displayname !== "."
+                        && !starts_with($member->displayname, ".#")) {
+                        $member->setNickname(".");
+                    }
+                }
+            }
+        }
+    }
+
+    $discord->on(Event::GUILD_MEMBER_ADD, function (Member $member, Discord $discord) {
+        $member->setNickname(".");
+    });
 
     $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) {
         $author = $message->author;
