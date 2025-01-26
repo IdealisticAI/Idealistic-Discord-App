@@ -119,6 +119,7 @@ $discord->on('ready', function (Discord $discord) {
         $prompt = $user->createPrompt(
             BigManageAccessPlatform::DISCORD,
             $author->id,
+            $message->id,
             $author->username,
             $author->displayname,
             $message->content,
