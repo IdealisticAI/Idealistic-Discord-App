@@ -125,7 +125,7 @@ $discord->on('ready', function (Discord $discord) {
                     $attachment->filename,
                     $attachment->description,
                     $attachment->content_type,
-                    $attachment->url,
+                    $attachment->proxy_url,
                     $attachment->size,
                     $attachment->width,
                     $attachment->height,
