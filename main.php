@@ -67,6 +67,9 @@ $discord->on('ready', function (Discord $discord) {
     });
 
     $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) {
+        if ($message->member !== null) {
+            return;
+        }
         $author = $message->author;
 
         if ($author === null
