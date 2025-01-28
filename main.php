@@ -62,9 +62,19 @@ $discord->on('ready', function (Discord $discord) {
         }
     }
 
+    // Separator
+
+    $discord->getLoop()->addPeriodicTimer(1, function () {
+        // todo notifications
+    });
+
+    // Separator
+
     $discord->on(Event::GUILD_MEMBER_ADD, function (Member $member, Discord $discord) {
         $member->setNickname(".");
     });
+
+    // Separator
 
     $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) {
         if ($message->member !== null) {
@@ -172,8 +182,7 @@ $discord->on('ready', function (Discord $discord) {
                     $author->username,
                     $author->displayname,
                     $message->content,
-                    $attachments,
-                    true // todo
+                    $attachments
                 );
 
                 if (!$prompt->getOutcome()->isPositiveOutcome()) {
