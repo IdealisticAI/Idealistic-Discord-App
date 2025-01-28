@@ -152,7 +152,7 @@ $discord->on('ready', function (Discord $discord) {
                     $attachment->size,
                     $attachment->width,
                     $attachment->height,
-                    null
+                    base64_encode(file_get_contents($attachment->proxy_url))
                 );
             }
         }
@@ -163,30 +163,44 @@ $discord->on('ready', function (Discord $discord) {
                     $user
                 )
             )
-        )->done(function (Message $newMessage) use ($user, $author, $attachments, $message) {
-            $prompt = $user->createPrompt(
-                BigManageAccessPlatform::DISCORD,
-                $author->id,
-                $message->id,
-                $author->username,
-                $author->displayname,
-                $message->content,
-                $attachments,
-                true // todo
-            );
-
-            if (!$prompt->getOutcome()->isPositiveOutcome()) {
-                $newMessage->edit(
-                    MessageBuilder::new()->setContent(
-                        $prompt->getOutcome()->getTranslatedMessage($user)
-                    )
+        )->done(function (Message $newMessage) use ($team, $user, $author, $attachments, $message) {
+            try {
+                $prompt = $user->createPrompt(
+                    BigManageAccessPlatform::DISCORD,
+                    $author->id,
+                    $message->id,
+                    $author->username,
+                    $author->displayname,
+                    $message->content,
+                    $attachments,
+                    true // todo
                 );
-                return;
+
+                if (!$prompt->getOutcome()->isPositiveOutcome()) {
+                    $newMessage->edit(
+                        MessageBuilder::new()->setContent(
+                            $prompt->getOutcome()->getTranslatedMessage($user)
+                        )
+                    );
+                    return;
+                }
+                $reply = $prompt->getReply();
+                $builder = MessageBuilder::new();
+                $builder->setContent($reply->getOutcome()->getTranslatedMessage($user));
+                $newMessage->edit($builder);
+            } catch (Throwable $e) {
+                BigManageError::storeThrowable(
+                    $team,
+                    $user,
+                    $e
+                );
+                $newMessage->edit(MessageBuilder::new()->setContent(
+                    BigManageStrings::translateMessage(
+                        BigManageGeneralMessage::EXCEPTION_THROWN,
+                        $user
+                    )
+                ));
             }
-            $reply = $prompt->getReply();
-            $builder = MessageBuilder::new();
-            $builder->setContent($reply->getOutcome()->getTranslatedMessage($user));
-            $newMessage->edit($builder);
         });
     });
 
