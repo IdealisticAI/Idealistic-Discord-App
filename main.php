@@ -77,9 +77,6 @@ $discord->on('ready', function (Discord $discord) {
 
         if (!empty($notifications)) {
             foreach ($notifications as $notification) {
-                if (!($notification instanceof BigManageNotification)) {
-                    continue;
-                }
                 $identity = $notification->getUser()->getLastIdentity();
 
                 if ($identity === null
@@ -177,16 +174,21 @@ $discord->on('ready', function (Discord $discord) {
 
         if (!empty($message->attachments->first())) {
             foreach ($message->attachments as $attachment) {
-                $attachments[] = new BigManageAttachment(
-                    $attachment->filename,
-                    $attachment->description,
-                    $attachment->content_type,
-                    $attachment->proxy_url,
-                    $attachment->size,
-                    $attachment->width,
-                    $attachment->height,
-                    base64_encode(file_get_contents($attachment->proxy_url))
-                );
+                $contents = @file_get_contents($attachment->proxy_url);
+
+                if ($contents !== false) {
+                    $attachments[] = new BigManageAttachment(
+                        $attachment->filename,
+                        $attachment->description,
+                        $attachment->content_type,
+                        $attachment->proxy_url,
+                        $attachment->size,
+                        $attachment->width,
+                        $attachment->height,
+                        base64_encode($contents),
+                        true
+                    );
+                }
             }
         }
         $message->reply(
@@ -196,7 +198,7 @@ $discord->on('ready', function (Discord $discord) {
                     $user
                 )
             )
-        )->done(function (Message $newMessage) use ($team, $user, $author, $attachments, $message) {
+        )->done(function (Message $newMessage) use ($discord, $team, $user, $author, $attachments, $message) {
             try {
                 $prompt = $user->createPrompt(
                     BigManageAccessPlatform::DISCORD,
@@ -220,9 +222,24 @@ $discord->on('ready', function (Discord $discord) {
                     $prompt->getReply()->getOutcome()->getTranslatedMessage($user),
                     2000
                 );
-                $newMessage->edit(
-                    MessageBuilder::new()->setContent(array_shift($pieces))
-                );
+                $builder = MessageBuilder::new()->setContent(array_shift($pieces));
+
+                if (!empty($prompt->getAttachments())) {
+                    foreach ($prompt->getAttachments() as $attachment) {
+                        if ($attachment->getName() !== null
+                            && $attachment->getFormat() !== null) {
+                            $data = $attachment->getDecodedData();
+
+                            if ($data !== null) {
+                                $builder->addFileFromContent(
+                                    $attachment->getName() . "." . $attachment->getFormat(),
+                                    $data
+                                );
+                            }
+                        }
+                    }
+                }
+                $newMessage->edit($builder);
 
                 if (!empty($pieces)) {
                     foreach ($pieces as $split) {
@@ -262,118 +279,129 @@ $discord->on('ready', function (Discord $discord) {
     $discord->listenCommand(
         $commandName,
         function (Interaction $interaction) use ($discord) {
-            if ($interaction->member !== null) {
-                $interaction->respondWithMessage(
-                    MessageBuilder::new()->setContent("This command can only be used in private messages."),
-                    true
-                );
-                return;
-            }
-            $author = $interaction->user;
-
-            if ($author === null
-                || $author->id === $discord->id) {
-                return;
-            }
-            $account = new Account(Account::BIGMANAGE_APPLICATION_ID);
-            $account = $account->getAccounts()->getAccountFromType(
-                BigManageAccessPlatform::DISCORD,
-                $author->username
-            );
-
-            if ($account === null) {
-                $interaction->respondWithMessage(
-                    MessageBuilder::new()->setContent(
-                        BigManageGeneralMessage::NO_DISCORD_ACCOUNT_CORRELATION_FOUND
-                    )
-                );
-                return;
-            }
-            $team = new BigManageTeam($account);
-            $user = $team->findUser($account);
-
-            if ($user instanceof BigManageOutcome) {
-                $interaction->respondWithMessage(
-                    MessageBuilder::new()->setContent(
-                        $user->getTranslatedMessage($team)
-                    )
-                );
-                return;
-            }
-            $buildMenu = false;
-
-            if ($team->hasEstablishedAccess()) {
-                if (empty($team->getAccesses())) {
+            try {
+                if ($interaction->member !== null) {
                     $interaction->respondWithMessage(
-                        MessageBuilder::new()->setContent(
-                            BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND
-                        ),
+                        MessageBuilder::new()->setContent("This command can only be used in private messages."),
                         true
                     );
-                } else if (sizeof($team->getAccesses()) === 1) {
-                    $interaction->respondWithMessage(
-                        MessageBuilder::new()->setContent(
-                            BigManageStrings::translateMessage(
-                                "You already have established access to the team '"
-                                . $team->getTitle() . "' and have no other team accesses.",
-                                $team
-                            )
-                        ),
-                        true
-                    );
-                } else {
-                    $buildMenu = true;
+                    return;
                 }
-            } else {
-                if (empty($team->getAccesses())) {
-                    $interaction->respondWithMessage(
-                        MessageBuilder::new()->setContent(
-                            BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND
-                        ),
-                        true
-                    );
-                } else {
-                    $buildMenu = true;
-                }
-            }
+                $author = $interaction->user;
 
-            if ($buildMenu) {
-                $selectMenu = SelectMenu::new()->setPlaceholder(
-                    "Please select a team to access."
-                )->setMinValues(
-                    1
-                )->setMaxValues(
-                    1
+                if ($author === null
+                    || $author->id === $discord->id) {
+                    return;
+                }
+                $account = new Account(Account::BIGMANAGE_APPLICATION_ID);
+                $account = $account->getAccounts()->getAccountFromType(
+                    BigManageAccessPlatform::DISCORD,
+                    $author->username
                 );
 
-                foreach ($team->getAccesses() as $index => $teamAccess) {
-                    $description = $teamAccess->getDescription();
-                    $selectMenu->addOption(
-                        Option::new(
-                            $teamAccess->getTitle(),
-                            $index
-                        )->setDescription(
-                            $description === null
-                                ? null
-                                : substr($description, 0, 100)
+                if ($account === null) {
+                    $interaction->respondWithMessage(
+                        MessageBuilder::new()->setContent(
+                            BigManageGeneralMessage::NO_DISCORD_ACCOUNT_CORRELATION_FOUND
                         )
                     );
+                    return;
                 }
-                $selectMenu->setListener(
-                    function (Interaction $interaction, Collection $options) use ($team) {
-                        $choice = $team->getAccesses()[$options[0]->getValue()];
+                $team = new BigManageTeam($account);
+                $user = $team->findUser($account);
+
+                if ($user instanceof BigManageOutcome) {
+                    $interaction->respondWithMessage(
+                        MessageBuilder::new()->setContent(
+                            $user->getTranslatedMessage($team)
+                        )
+                    );
+                    return;
+                }
+                $buildMenu = false;
+
+                if ($team->hasEstablishedAccess()) {
+                    if (empty($team->getAccesses())) {
                         $interaction->respondWithMessage(
                             MessageBuilder::new()->setContent(
-                                "You have selected the team '" . $choice->getTitle() . "'"
+                                BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND
                             ),
                             true
                         );
-                    },
-                    $discord
+                    } else if (sizeof($team->getAccesses()) === 1) {
+                        $interaction->respondWithMessage(
+                            MessageBuilder::new()->setContent(
+                                BigManageStrings::translateMessage(
+                                    "You already have established access to the team '"
+                                    . $team->getTitle() . "' and have no other team accesses.",
+                                    $team
+                                )
+                            ),
+                            true
+                        );
+                    } else {
+                        $buildMenu = true;
+                    }
+                } else {
+                    if (empty($team->getAccesses())) {
+                        $interaction->respondWithMessage(
+                            MessageBuilder::new()->setContent(
+                                BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND
+                            ),
+                            true
+                        );
+                    } else {
+                        $buildMenu = true;
+                    }
+                }
+
+                if ($buildMenu) {
+                    $selectMenu = SelectMenu::new()->setPlaceholder(
+                        "Please select a team to access."
+                    )->setMinValues(
+                        1
+                    )->setMaxValues(
+                        1
+                    );
+
+                    foreach ($team->getAccesses() as $index => $teamAccess) {
+                        $description = $teamAccess->getDescription();
+                        $selectMenu->addOption(
+                            Option::new(
+                                $teamAccess->getTitle(),
+                                $index
+                            )->setDescription(
+                                $description === null
+                                    ? null
+                                    : substr($description, 0, 100)
+                            )
+                        );
+                    }
+                    $selectMenu->setListener(
+                        function (Interaction $interaction, Collection $options) use ($team) {
+                            $choice = $team->getAccesses()[$options[0]->getValue()];
+                            $interaction->respondWithMessage(
+                                MessageBuilder::new()->setContent(
+                                    "You have selected the team '" . $choice->getTitle() . "'"
+                                ),
+                                true
+                            );
+                        },
+                        $discord
+                    );
+                    $interaction->respondWithMessage(
+                        MessageBuilder::new()->addComponent($selectMenu),
+                    );
+                }
+            } catch (Throwable $e) {
+                BigManageError::storeThrowable(
+                    null,
+                    null,
+                    $e
                 );
-                $interaction->respondWithMessage(
-                    MessageBuilder::new()->addComponent($selectMenu),
-                );
+                $interaction->respondWithMessage(MessageBuilder::new()->setContent(
+                    BigManageGeneralMessage::EXCEPTION_THROWN
+                ));
             }
         }
     );
