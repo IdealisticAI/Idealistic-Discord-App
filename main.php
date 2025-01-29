@@ -69,8 +69,37 @@ $discord->on('ready', function (Discord $discord) {
 
     // Separator
 
-    $discord->getLoop()->addPeriodicTimer(1, function () {
-        // todo notifications
+    $discord->getLoop()->addPeriodicTimer(1, function () use ($discord) {
+        if (empty($discord->users->first())) {
+            return;
+        }
+        $notifications = BigManageNotifications::retrieve(BigManageAccessPlatform::DISCORD);
+
+        if (!empty($notifications)) {
+            foreach ($notifications as $notification) {
+                if (!($notification instanceof BigManageNotification)) {
+                    continue;
+                }
+                $identity = $notification->getUser()->getLastIdentity();
+
+                if ($identity === null
+                    || $identity->getPlatformID() !== BigManageAccessPlatform::DISCORD) {
+                    continue;
+                }
+                foreach ($discord->users as $user) {
+                    if ($user->id === $identity->getPlatformUserID()) {
+                        if ($notification->process()) {
+                            $user->getPrivateChannel()->done(function ($channel) use ($notification) {
+                                $channel->sendMessage(
+                                    MessageBuilder::new()->setContent($notification->getMessage())
+                                );
+                            });
+                        }
+                        break;
+                    }
+                }
+            }
+        }
     });
 
     // Separator
