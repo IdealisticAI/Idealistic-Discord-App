@@ -224,15 +224,15 @@ $discord->on('ready', function (Discord $discord) {
                 );
                 $builder = MessageBuilder::new()->setContent(array_shift($pieces));
 
-                if (!empty($prompt->getAttachments())) {
-                    foreach ($prompt->getAttachments() as $attachment) {
+                if (!empty($prompt->getReply()->getAttachments())) {
+                    foreach ($prompt->getReply()->getAttachments() as $attachment) {
                         if ($attachment->getName() !== null
-                            && $attachment->getFormat() !== null) {
+                            && $attachment->getSimpleFormat() !== null) {
                             $data = $attachment->getDecodedData();
 
                             if ($data !== null) {
                                 $builder->addFileFromContent(
-                                    $attachment->getName() . "." . $attachment->getFormat(),
+                                    $attachment->getName() . "." . $attachment->getSimpleFormat(),
                                     $data
                                 );
                             }
