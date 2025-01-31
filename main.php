@@ -178,6 +178,7 @@ $discord->on('ready', function (Discord $discord) {
 
                 if ($contents !== false) {
                     $attachments[] = new BigManageAttachment(
+                        null,
                         $attachment->filename,
                         $attachment->description,
                         $attachment->content_type,
@@ -185,6 +186,7 @@ $discord->on('ready', function (Discord $discord) {
                         $attachment->size,
                         $attachment->width,
                         $attachment->height,
+                        null,
                         base64_encode($contents),
                         true
                     );
