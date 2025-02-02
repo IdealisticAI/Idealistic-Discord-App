@@ -203,13 +203,21 @@ $discord->on('ready', function (Discord $discord) {
             )
         )->done(function (Message $newMessage) use ($discord, $team, $user, $author, $attachments, $message) {
             try {
+                if ($message->referenced_message === null) {
+                    $content = $message->content;
+                } else {
+                    $object = new stdClass();
+                    $object->content = $message->content;
+                    $object->referenced_message = $message->referenced_message;
+                    $content = json_encode($object);
+                }
                 $prompt = $user->createPrompt(
                     BigManageAccessPlatform::DISCORD,
                     $author->id,
                     $message->id,
                     $author->username,
                     $author->displayname,
-                    $message->content,
+                    $content,
                     $attachments
                 );
 
