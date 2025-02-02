@@ -188,6 +188,7 @@ $discord->on('ready', function (Discord $discord) {
                         $attachment->height,
                         null,
                         base64_encode($contents),
+                        null,
                         true
                     );
                 }
