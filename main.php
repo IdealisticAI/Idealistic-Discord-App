@@ -237,13 +237,20 @@ $discord->on('ready', function (Discord $discord) {
 
                 if (!empty($prompt->getReply()->getAttachments())) {
                     foreach ($prompt->getReply()->getAttachments() as $attachment) {
+                        if (!($attachment instanceof BigManageAttachment)) {
+                            continue;
+                        }
                         if ($attachment->getName() !== null
-                            && $attachment->getSimpleFormat() !== null) {
+                            && ($attachment->nameHasFormat()
+                                || $attachment->getSimpleFormat() !== null)) {
                             $data = $attachment->getDecodedData();
 
                             if ($data !== null) {
                                 $builder->addFileFromContent(
-                                    $attachment->getName() . "." . $attachment->getSimpleFormat(),
+                                    $attachment->getName()
+                                    . ($attachment->nameHasFormat()
+                                        ? ""
+                                        : "." . $attachment->getSimpleFormat()),
                                     $data
                                 );
                             }
