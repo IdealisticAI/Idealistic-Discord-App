@@ -174,9 +174,19 @@ $discord->on('ready', function (Discord $discord) {
 
         if (!empty($message->attachments->first())) {
             foreach ($message->attachments as $attachment) {
-                $contents = @file_get_contents($attachment->proxy_url);
+                $contents = @file_get_contents($attachment->url);
 
-                if ($contents !== false) {
+                if ($contents === false) {
+                    $message->reply(
+                        MessageBuilder::new()->setContent(
+                            BigManageStrings::translateMessage(
+                                BigManageGeneralMessage::ATTACHMENT_FAILED_PROCESSING,
+                                $user
+                            )
+                        )
+                    );
+                    return;
+                } else {
                     $attachments[] = new BigManageAttachment(
                         null,
                         $attachment->filename,
