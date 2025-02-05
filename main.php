@@ -294,16 +294,24 @@ $discord->on('ready', function (Discord $discord) {
 
     // Separator
 
-    $commandName = "bigmanage";
+    $commandName = strtolower(BigManageVariable::APPLICATION_NAME);
     $commandBuilder = CommandBuilder::new()
         ->setName($commandName)
         ->setDescription("Manage your access");
 
-    $discord->application->commands->save(
-        $discord->application->commands->create(
-            $commandBuilder->toArray()
-        )
-    );
+    try {
+        $discord->application->commands->save(
+            $discord->application->commands->create(
+                $commandBuilder->toArray()
+            )
+        );
+    } catch (Throwable $e) {
+        BigManageError::storeThrowable(
+            null,
+            null,
+            $e
+        );
+    }
     $discord->listenCommand(
         $commandName,
         function (Interaction $interaction) use ($discord) {
