@@ -117,7 +117,7 @@ $discord->on('ready', function (Discord $discord) {
             || $author->id === $discord->id) {
             return;
         }
-        if (true) {
+        if (false) {
             $author->getPrivateChannel()->done(function ($channel) use ($discord, $author) {
                 $channel->getMessageHistory([])->done(function ($messages) use ($discord, $author) {
                     foreach ($messages as $message) {
