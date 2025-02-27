@@ -51,6 +51,7 @@ $discord = new Discord([
 
 $discord->on('ready', function (Discord $discord) {
     load_sql_database();
+    $queue = array();
 
     if (!empty($discord->guilds->first())) {
         foreach ($discord->guilds as $guild) {
@@ -99,6 +100,102 @@ $discord->on('ready', function (Discord $discord) {
         }
     });
 
+    $discord->getLoop()->addPeriodicTimer(1, function () use (&$queue) {
+        foreach ($queue as $promptID => $details) {
+            $user = $details[0];
+            $message = $details[1];
+
+            if (!($user instanceof BigManageUser)
+                || !($message instanceof Message)) {
+                unset($queue[$promptID]);
+                continue;
+            }
+            try {
+                $prompt = $user->getPrompt($promptID);
+
+                if ($prompt === null) {
+                    continue;
+                }
+                if (is_string($prompt)) {
+                    unset($queue[$promptID]);
+                    $message->edit(
+                        MessageBuilder::new()->setContent(
+                            $prompt
+                        )
+                    );
+                    return;
+                }
+                $reply = $prompt->getReply();
+
+                if ($reply === null) {
+                    unset($queue[$promptID]);
+                    $message->edit(
+                        MessageBuilder::new()->setContent(
+                            BigManageStrings::translateMessage(
+                                BigManageGeneralMessage::EXCEPTION_THROWN,
+                                $user
+                            )
+                        )
+                    );
+                    return;
+                }
+                $pieces = str_split(
+                    BigManageStrings::translateMessage($reply->getAnswer(), $user),
+                    2000
+                );
+                $builder = MessageBuilder::new()->setContent(array_shift($pieces));
+                $attachments = array_merge(
+                    $prompt->getCreatedAttachments(),
+                    $prompt->getRequestedAttachments(false)
+                );
+
+                if (!empty($attachments)) {
+                    foreach ($attachments as $attachment) {
+                        if (!($attachment instanceof BigManageAttachment)) {
+                            continue;
+                        }
+                        if ($attachment->getName() !== null
+                            && ($attachment->nameHasFormat()
+                                || $attachment->getSimpleFormat() !== null)) {
+                            $data = $attachment->getDecodedData();
+
+                            if ($data !== null) {
+                                $builder->addFileFromContent(
+                                    $attachment->getName()
+                                    . ($attachment->nameHasFormat()
+                                        ? ""
+                                        : "." . $attachment->getSimpleFormat()),
+                                    $data
+                                );
+                            }
+                        }
+                    }
+                }
+                $message->edit($builder);
+
+                if (!empty($pieces)) {
+                    foreach ($pieces as $split) {
+                        $message->reply(
+                            MessageBuilder::new()->setContent($split)
+                        );
+                    }
+                }
+            } catch (Throwable $e) {
+                BigManageError::storeThrowable(
+                    $user->getTeam(),
+                    $user,
+                    $e
+                );
+                $message->edit(MessageBuilder::new()->setContent(
+                    BigManageStrings::translateMessage(
+                        BigManageGeneralMessage::EXCEPTION_THROWN,
+                        $user
+                    )
+                ));
+            }
+        }
+    });
+
     // Separator
 
     $discord->on(Event::GUILD_MEMBER_ADD, function (Member $member, Discord $discord) {
@@ -107,7 +204,7 @@ $discord->on('ready', function (Discord $discord) {
 
     // Separator
 
-    $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) {
+    $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) use (&$queue) {
         if ($message->member !== null) {
             return;
         }
@@ -211,84 +308,25 @@ $discord->on('ready', function (Discord $discord) {
                     $user
                 )
             )
-        )->done(function (Message $newMessage) use ($discord, $team, $user, $author, $attachments, $message) {
-            try {
-                if ($message->referenced_message === null) {
-                    $content = $message->content;
-                } else {
-                    $object = new stdClass();
-                    $object->content = $message->content;
-                    $object->referenced_message = $message->referenced_message;
-                    $content = json_encode($object);
-                }
-                $prompt = $user->createPrompt(
-                    BigManageAccessPlatform::DISCORD,
-                    $author->id,
-                    $message->id,
-                    $author->username,
-                    $author->displayname,
-                    $content,
-                    $attachments
-                );
-
-                if (!$prompt->getOutcome()->isPositiveOutcome()) {
-                    $newMessage->edit(
-                        MessageBuilder::new()->setContent(
-                            $prompt->getOutcome()->getTranslatedMessage($user)
-                        )
-                    );
-                    return;
-                }
-                $pieces = str_split(
-                    $prompt->getReply()->getOutcome()->getTranslatedMessage($user),
-                    2000
-                );
-                $builder = MessageBuilder::new()->setContent(array_shift($pieces));
-
-                if (!empty($prompt->getReply()->getAttachments())) {
-                    foreach ($prompt->getReply()->getAttachments() as $attachment) {
-                        if (!($attachment instanceof BigManageAttachment)) {
-                            continue;
-                        }
-                        if ($attachment->getName() !== null
-                            && ($attachment->nameHasFormat()
-                                || $attachment->getSimpleFormat() !== null)) {
-                            $data = $attachment->getDecodedData();
-
-                            if ($data !== null) {
-                                $builder->addFileFromContent(
-                                    $attachment->getName()
-                                    . ($attachment->nameHasFormat()
-                                        ? ""
-                                        : "." . $attachment->getSimpleFormat()),
-                                    $data
-                                );
-                            }
-                        }
-                    }
-                }
-                $newMessage->edit($builder);
-
-                if (!empty($pieces)) {
-                    foreach ($pieces as $split) {
-                        $newMessage->reply(
-                            MessageBuilder::new()->setContent($split)
-                        );
-                    }
-                }
-            } catch (Throwable $e) {
-                BigManageError::storeThrowable(
-                    $team,
-                    $user,
-                    $e
-                );
-                $newMessage->edit(MessageBuilder::new()->setContent(
-                    BigManageStrings::translateMessage(
-                        BigManageGeneralMessage::EXCEPTION_THROWN,
-                        $user
-                    )
-                ));
+        )->done(function (Message $newMessage) use ($discord, $team, $user, $author, $attachments, $message, &$queue) {
+            if ($message->referenced_message === null) {
+                $content = $message->content;
+            } else {
+                $object = new stdClass();
+                $object->content = $message->content;
+                $object->referenced_message = $message->referenced_message;
+                $content = json_encode($object);
             }
+            $prompt = $user->createPrompt(
+                BigManageAccessPlatform::DISCORD,
+                $author->id,
+                $message->id,
+                $author->username,
+                $author->displayname,
+                $content,
+                $attachments
+            );
+            $queue[$prompt] = array($user, $newMessage);
         });
     });
 
