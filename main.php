@@ -104,23 +104,44 @@ $discord->on('ready', function (Discord $discord) {
         foreach ($queue as $promptID => $details) {
             $user = $details[0];
             $message = $details[1];
+            $time = $details[2];
 
             if (!($user instanceof BigManageUser)
-                || !($message instanceof Message)) {
+                || !($message instanceof Message)
+                || !is_int($time)) {
                 unset($queue[$promptID]);
+                $message->edit(
+                    MessageBuilder::new()->setContent(
+                        BigManageGeneralMessage::EXCEPTION_THROWN
+                    )
+                );
                 continue;
             }
             try {
                 $prompt = $user->getPrompt($promptID);
 
                 if ($prompt === null) {
+                    if (time() - $time >= 120) {
+                        unset($queue[$promptID]);
+                        $message->edit(
+                            MessageBuilder::new()->setContent(
+                                BigManageStrings::translateMessage(
+                                    BigManageGeneralMessage::EXCEPTION_THROWN,
+                                    $user
+                                )
+                            )
+                        );
+                    }
                     continue;
                 }
                 if (is_string($prompt)) {
                     unset($queue[$promptID]);
                     $message->edit(
                         MessageBuilder::new()->setContent(
-                            $prompt
+                            BigManageStrings::translateMessage(
+                                $prompt,
+                                $user
+                            )
                         )
                     );
                     return;
@@ -326,7 +347,7 @@ $discord->on('ready', function (Discord $discord) {
                 $content,
                 $attachments
             );
-            $queue[$prompt] = array($user, $newMessage);
+            $queue[$prompt] = array($user, $newMessage, time());
         });
     });
 
