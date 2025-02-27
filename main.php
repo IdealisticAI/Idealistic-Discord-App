@@ -121,7 +121,7 @@ $discord->on('ready', function (Discord $discord) {
                 $prompt = $user->getPrompt($promptID);
 
                 if ($prompt === null) {
-                    if (time() - $time >= 120) {
+                    if (time() - $time >= BigManageLimit::PROMPT_SECONDS_TIMEOUT) {
                         unset($queue[$promptID]);
                         $message->edit(
                             MessageBuilder::new()->setContent(
