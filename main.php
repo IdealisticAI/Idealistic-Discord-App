@@ -160,6 +160,7 @@ $discord->on('ready', function (Discord $discord) {
                     );
                     return;
                 }
+                unset($queue[$promptID]);
                 $pieces = str_split(
                     BigManageStrings::translateMessage($reply->getAnswer(), $user),
                     2000
