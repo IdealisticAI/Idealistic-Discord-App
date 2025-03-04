@@ -165,30 +165,53 @@ $discord->on('ready', function (Discord $discord) {
                     BigManageStrings::translateMessage($reply->getAnswer(), $user),
                     2000
                 );
-                $builder = MessageBuilder::new()->setContent(array_shift($pieces));
+                $firstPiece = array_shift($pieces);
+                $builder = MessageBuilder::new()->setContent($firstPiece);
                 $attachments = array_merge(
                     $prompt->getCreatedAttachments(),
                     $prompt->getRequestedAttachments(false)
                 );
+                $byteCount = array();
+                $messageAttachments = array();
+                $lastMessage = 0;
+                $byteCount[$lastMessage] = strlen($firstPiece);
 
                 if (!empty($attachments)) {
+                    $byteLimit = BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD];
+
                     foreach ($attachments as $attachment) {
                         if (!($attachment instanceof BigManageAttachment)) {
                             continue;
                         }
+                        $fullBytes = $attachment->getFullBytes();
+
                         if ($attachment->getName() !== null
+                            && $fullBytes <= $byteLimit
                             && ($attachment->nameHasFormat()
                                 || $attachment->getSimpleFormat() !== null)) {
                             $data = $attachment->getDecodedData();
 
                             if ($data !== null) {
-                                $builder->addFileFromContent(
-                                    $attachment->getName()
-                                    . ($attachment->nameHasFormat()
-                                        ? ""
-                                        : "." . $attachment->getSimpleFormat()),
-                                    $data
-                                );
+                                if (($byteCount[$lastMessage] ?? 0) + $fullBytes <= $byteLimit) {
+                                    $byteCount[$lastMessage] += $fullBytes;
+                                    $builder->addFileFromContent(
+                                        $attachment->getName()
+                                        . ($attachment->nameHasFormat()
+                                            ? ""
+                                            : "." . $attachment->getSimpleFormat()),
+                                        $data
+                                    );
+                                } else {
+                                    $lastMessage++;
+                                    $byteCount[$lastMessage] = $fullBytes;
+                                }
+                                if ($lastMessage !== 0) {
+                                    if (array_key_exists($lastMessage, $messageAttachments)) {
+                                        $messageAttachments[$lastMessage][] = $attachment;
+                                    } else {
+                                        $messageAttachments[$lastMessage] = array($attachment);
+                                    }
+                                }
                             }
                         }
                     }
@@ -197,9 +220,36 @@ $discord->on('ready', function (Discord $discord) {
 
                 if (!empty($pieces)) {
                     foreach ($pieces as $split) {
-                        $message->reply(
-                            MessageBuilder::new()->setContent($split)
-                        );
+                        $builder = MessageBuilder::new()->setContent($split);
+                        $attachments = array_shift($messageAttachments);
+
+                        if (!empty($attachments)) {
+                            $attachment = $messageAttachments[$lastMessage];
+                            $builder->addFileFromContent(
+                                $attachment->getName()
+                                . ($attachment->nameHasFormat()
+                                    ? ""
+                                    : "." . $attachment->getSimpleFormat()),
+                                $attachment->getDecodedData()
+                            );
+                        }
+                        $message->reply($builder);
+                    }
+                }
+                if (!empty($messageAttachments)) {
+                    foreach ($messageAttachments as $attachments) {
+                        $builder = MessageBuilder::new();
+
+                        foreach ($attachments as $attachment) {
+                            $builder->addFileFromContent(
+                                $attachment->getName()
+                                . ($attachment->nameHasFormat()
+                                    ? ""
+                                    : "." . $attachment->getSimpleFormat()),
+                                $attachment->getDecodedData()
+                            );
+                        }
+                        $message->reply($builder);
                     }
                 }
             } catch (Throwable $e) {
