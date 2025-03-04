@@ -203,7 +203,7 @@ $discord->on('ready', function (Discord $discord) {
                                     );
                                 } else {
                                     $lastMessage++;
-                                    $byteCount[$lastMessage] = $fullBytes;
+                                    $byteCount[$lastMessage] = $fullBytes + strlen($pieces[$lastMessage] ?? "");
                                 }
                                 if ($lastMessage !== 0) {
                                     if (array_key_exists($lastMessage, $messageAttachments)) {
@@ -224,14 +224,15 @@ $discord->on('ready', function (Discord $discord) {
                         $attachments = array_shift($messageAttachments);
 
                         if (!empty($attachments)) {
-                            $attachment = $messageAttachments[$lastMessage];
-                            $builder->addFileFromContent(
-                                $attachment->getName()
-                                . ($attachment->nameHasFormat()
-                                    ? ""
-                                    : "." . $attachment->getSimpleFormat()),
-                                $attachment->getDecodedData()
-                            );
+                            foreach ($attachments as $attachment) {
+                                $builder->addFileFromContent(
+                                    $attachment->getName()
+                                    . ($attachment->nameHasFormat()
+                                        ? ""
+                                        : "." . $attachment->getSimpleFormat()),
+                                    $attachment->getDecodedData()
+                                );
+                            }
                         }
                         $message->reply($builder);
                     }
