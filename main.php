@@ -230,6 +230,9 @@ $discord->on('ready', function (Discord $discord) {
 
                         if (!empty($attachments)) {
                             foreach ($attachments as $attachment) {
+                                if (!($attachment instanceof BigManageAttachment)) {
+                                    continue;
+                                }
                                 $builder->addFileFromContent(
                                     $attachment->getName()
                                     . ($attachment->nameHasFormat()
@@ -247,6 +250,9 @@ $discord->on('ready', function (Discord $discord) {
                         $builder = MessageBuilder::new();
 
                         foreach ($attachments as $attachment) {
+                            if (!($attachment instanceof BigManageAttachment)) {
+                                continue;
+                            }
                             $builder->addFileFromContent(
                                 $attachment->getName()
                                 . ($attachment->nameHasFormat()
