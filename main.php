@@ -161,20 +161,22 @@ $discord->on('ready', function (Discord $discord) {
                     return;
                 }
                 unset($queue[$promptID]);
+                $byteCount = array();
+                $messageAttachments = array();
+                $lastMessage = 0;
                 $pieces = str_split(
                     BigManageStrings::translateMessage($reply->getAnswer(), $user),
                     2000
                 );
-                $firstPiece = array_shift($pieces);
-                $builder = MessageBuilder::new()->setContent($firstPiece);
+
+                foreach ($pieces as $key => $piece) {
+                    $byteCount[$key] = strlen($piece);
+                }
+                $builder = MessageBuilder::new()->setContent(array_shift($pieces));
                 $attachments = array_merge(
                     $prompt->getCreatedAttachments(),
                     $prompt->getRequestedAttachments(false)
                 );
-                $byteCount = array();
-                $messageAttachments = array();
-                $lastMessage = 0;
-                $byteCount[$lastMessage] = strlen($firstPiece);
 
                 if (!empty($attachments)) {
                     $byteLimit = BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD];
@@ -193,7 +195,6 @@ $discord->on('ready', function (Discord $discord) {
 
                             if ($data !== null) {
                                 if (($byteCount[$lastMessage] ?? 0) + $fullBytes <= $byteLimit) {
-                                    $byteCount[$lastMessage] += $fullBytes;
                                     $builder->addFileFromContent(
                                         $attachment->getName()
                                         . ($attachment->nameHasFormat()
@@ -203,7 +204,11 @@ $discord->on('ready', function (Discord $discord) {
                                     );
                                 } else {
                                     $lastMessage++;
-                                    $byteCount[$lastMessage] = $fullBytes + strlen($pieces[$lastMessage] ?? "");
+                                }
+                                if (array_key_exists($lastMessage, $byteCount)) {
+                                    $byteCount[$lastMessage] += $fullBytes;
+                                } else {
+                                    $byteCount[$lastMessage] = $fullBytes;
                                 }
                                 if ($lastMessage !== 0) {
                                     if (array_key_exists($lastMessage, $messageAttachments)) {
@@ -219,8 +224,8 @@ $discord->on('ready', function (Discord $discord) {
                 $message->edit($builder);
 
                 if (!empty($pieces)) {
-                    foreach ($pieces as $split) {
-                        $builder = MessageBuilder::new()->setContent($split);
+                    foreach ($pieces as $piece) {
+                        $builder = MessageBuilder::new()->setContent($piece);
                         $attachments = array_shift($messageAttachments);
 
                         if (!empty($attachments)) {
