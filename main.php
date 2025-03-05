@@ -100,7 +100,7 @@ $discord->on('ready', function (Discord $discord) {
         }
     });
 
-    $discord->getLoop()->addPeriodicTimer(0.5, function () use (&$queue) {
+    $discord->getLoop()->addPeriodicTimer(1.0 / 3.0, function () use (&$queue) {
         foreach ($queue as $promptID => $details) {
             $user = $details[0];
             $message = $details[1];
