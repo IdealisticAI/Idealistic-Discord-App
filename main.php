@@ -428,11 +428,7 @@ $discord->on('ready', function (Discord $discord) {
             )
         );
     } catch (Throwable $e) {
-        BigManageError::storeThrowable(
-            null,
-            null,
-            $e
-        );
+        exit();
     }
     $discord->listenCommand(
         $commandName,
