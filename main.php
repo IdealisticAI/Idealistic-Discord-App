@@ -70,7 +70,7 @@ $discord->on('ready', function (Discord $discord) {
 
     // Separator
 
-    $discord->getLoop()->addPeriodicTimer(1, function () use ($discord) {
+    $discord->getLoop()->addPeriodicTimer(0.05, function () use ($discord) {
         if (empty($discord->users->first())) {
             return;
         }
@@ -100,7 +100,7 @@ $discord->on('ready', function (Discord $discord) {
         }
     });
 
-    $discord->getLoop()->addPeriodicTimer(1.0 / 3.0, function () use (&$queue) {
+    $discord->getLoop()->addPeriodicTimer(0.05, function () use (&$queue) {
         foreach ($queue as $promptID => $details) {
             $user = $details[0];
             $message = $details[1];
