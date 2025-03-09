@@ -179,7 +179,7 @@ $discord->on('ready', function (Discord $discord) {
                 );
 
                 if (!empty($attachments)) {
-                    $byteLimit = BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD];
+                    $byteLimit = floor(BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD] * 0.99);
 
                     foreach ($attachments as $attachment) {
                         if (!($attachment instanceof BigManageAttachment)) {
@@ -194,15 +194,7 @@ $discord->on('ready', function (Discord $discord) {
                             $data = $attachment->getDecodedData();
 
                             if ($data !== null) {
-                                if (($byteCount[$lastMessage] ?? 0) + $fullBytes <= $byteLimit) {
-                                    $builder->addFileFromContent(
-                                        $attachment->getName()
-                                        . ($attachment->nameHasFormat()
-                                            ? ""
-                                            : "." . $attachment->getSimpleFormat()),
-                                        $data
-                                    );
-                                } else {
+                                if (($byteCount[$lastMessage] ?? 0) + $fullBytes > $byteLimit) {
                                     $lastMessage++;
                                 }
                                 if (array_key_exists($lastMessage, $byteCount)) {
@@ -210,15 +202,29 @@ $discord->on('ready', function (Discord $discord) {
                                 } else {
                                     $byteCount[$lastMessage] = $fullBytes;
                                 }
-                                if ($lastMessage !== 0) {
-                                    if (array_key_exists($lastMessage, $messageAttachments)) {
-                                        $messageAttachments[$lastMessage][] = $attachment;
-                                    } else {
-                                        $messageAttachments[$lastMessage] = array($attachment);
-                                    }
+                                if (array_key_exists($lastMessage, $messageAttachments)) {
+                                    $messageAttachments[$lastMessage][] = $attachment;
+                                } else {
+                                    $messageAttachments[$lastMessage] = array($attachment);
                                 }
                             }
                         }
+                    }
+                }
+                $attachments = array_shift($messageAttachments);
+
+                if (!empty($attachments)) {
+                    foreach ($attachments as $attachment) {
+                        if (!($attachment instanceof BigManageAttachment)) {
+                            continue;
+                        }
+                        $builder->addFileFromContent(
+                            $attachment->getName()
+                            . ($attachment->nameHasFormat()
+                                ? ""
+                                : "." . $attachment->getSimpleFormat()),
+                            $attachment->getDecodedData()
+                        );
                     }
                 }
                 $message->edit($builder);
