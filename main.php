@@ -53,16 +53,14 @@ $discord->on('ready', function (Discord $discord) {
     load_sql_database();
     $queue = array();
 
-    if (!empty($discord->guilds->first())) {
-        foreach ($discord->guilds as $guild) {
-            if (!empty($guild->members->first())) {
-                foreach ($guild->members as $member) {
-                    if ($member->id !== $discord->id
-                        && !$member->getPermissions()?->administrator
-                        && $member->displayname !== "."
-                        && !starts_with($member->displayname, ".#")) {
-                        $member->setNickname(".");
-                    }
+    foreach ($discord->guilds as $guild) {
+        if (!empty($guild->members->first())) {
+            foreach ($guild->members as $member) {
+                if ($member->id !== $discord->id
+                    && !$member->getPermissions()?->administrator
+                    && $member->displayname !== "."
+                    && !starts_with($member->displayname, ".#")) {
+                    $member->setNickname(".");
                 }
             }
         }
@@ -364,9 +362,16 @@ $discord->on('ready', function (Discord $discord) {
             );
             return;
         }
-        $attachments = array();
+        $message->reply(
+            MessageBuilder::new()->setContent(
+                BigManageStrings::translateMessage(
+                    BigManageGeneralMessage::PROMPT_WAIT_RESPONSE,
+                    $user
+                )
+            )
+        )->done(function (Message $newMessage) use ($discord, $team, $user, $author, $message, &$queue) {
+            $attachments = array();
 
-        if (!empty($message->attachments->first())) {
             foreach ($message->attachments as $attachment) {
                 $contents = @file_get_contents($attachment->url);
 
@@ -374,7 +379,7 @@ $discord->on('ready', function (Discord $discord) {
                     $contents = @file_get_contents($attachment->proxy_url);
                 }
                 if ($contents === false) {
-                    $message->reply(
+                    $newMessage->edit(
                         MessageBuilder::new()->setContent(
                             BigManageStrings::translateMessage(
                                 BigManageGeneralMessage::ATTACHMENT_FAILED_PROCESSING,
@@ -400,15 +405,6 @@ $discord->on('ready', function (Discord $discord) {
                     );
                 }
             }
-        }
-        $message->reply(
-            MessageBuilder::new()->setContent(
-                BigManageStrings::translateMessage(
-                    BigManageGeneralMessage::PROMPT_WAIT_RESPONSE,
-                    $user
-                )
-            )
-        )->done(function (Message $newMessage) use ($discord, $team, $user, $author, $attachments, $message, &$queue) {
             if ($message->referenced_message === null) {
                 $content = $message->content;
             } else {
