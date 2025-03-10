@@ -371,6 +371,9 @@ $discord->on('ready', function (Discord $discord) {
                 $contents = @file_get_contents($attachment->url);
 
                 if ($contents === false) {
+                    $contents = @file_get_contents($attachment->proxy_url);
+                }
+                if ($contents === false) {
                     $message->reply(
                         MessageBuilder::new()->setContent(
                             BigManageStrings::translateMessage(
