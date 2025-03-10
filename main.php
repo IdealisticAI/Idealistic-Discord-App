@@ -300,8 +300,15 @@ $discord->on('ready', function (Discord $discord) {
         }
         $author = $message->author;
 
-        if ($author === null
-            || $author->id === $discord->id) {
+        if ($author === null) {
+            $message->reply(
+                MessageBuilder::new()->setContent(
+                    "No Discord message author found."
+                )
+            );
+            return;
+        }
+        if ($author->id === $discord->id) {
             return;
         }
         if (false) {
