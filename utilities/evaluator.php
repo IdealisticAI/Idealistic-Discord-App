@@ -67,7 +67,20 @@ class evaluator
 
         if (!empty($files)) {
             foreach ($files as $key => $fileName) {
-                if (!is_file($fileName)) {
+                if (is_file($fileName)) {
+                    $modifiedFileName = str_replace("_", "/", $fileName);
+
+                    if (in_array($modifiedFileName, self::exemptedFiles)) {
+                        unset($files[$key]);
+                    } else {
+                        foreach (self::exemptedPaths as $path) {
+                            if (starts_with($modifiedFileName, $path)) {
+                                unset($files[$key]);
+                                break;
+                            }
+                        }
+                    }
+                } else {
                     unset($files[$key]);
                 }
             }
