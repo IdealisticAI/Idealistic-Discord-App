@@ -422,6 +422,18 @@ $discord->on('ready', function (Discord $discord) {
                 $content,
                 $attachments
             );
+
+            if ($prompt === null) {
+                $newMessage->edit(
+                    MessageBuilder::new()->setContent(
+                        BigManageStrings::translateMessage(
+                            BigManageGeneralMessage::EXCEPTION_THROWN,
+                            $user
+                        )
+                    )
+                );
+                return;
+            }
             $queue[$prompt] = array($user, $newMessage, time());
         });
     });
