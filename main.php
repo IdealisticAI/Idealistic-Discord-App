@@ -165,10 +165,13 @@ $discord->on('ready', function (Discord $discord) {
                 $pieces = array();
 
                 foreach ($replies as $reply) {
+                    if (!($reply instanceof BigManageHistoryReply)) {
+                        continue;
+                    }
                     $pieces = array_merge(
                         $pieces,
                         str_split(
-                            $reply,
+                            $reply->getAnswer(),
                             2000
                         )
                     );
