@@ -144,9 +144,9 @@ $discord->on('ready', function (Discord $discord) {
                     );
                     return;
                 }
-                $reply = $prompt->getReply();
+                $replies = $prompt->getReplies();
 
-                if ($reply === null) {
+                if (empty($replies)) {
                     unset($queue[$promptID]);
                     $message->edit(
                         MessageBuilder::new()->setContent(
@@ -162,11 +162,17 @@ $discord->on('ready', function (Discord $discord) {
                 $byteCount = array();
                 $messageAttachments = array();
                 $lastMessage = 0;
-                $pieces = str_split(
-                    BigManageStrings::translateMessage($reply->getAnswer(), $user),
-                    2000
-                );
+                $pieces = array();
 
+                foreach ($replies as $reply) {
+                    $pieces = array_merge(
+                        $pieces,
+                        str_split(
+                            $reply,
+                            2000
+                        )
+                    );
+                }
                 foreach ($pieces as $key => $piece) {
                     $byteCount[$key] = strlen($piece);
                 }
