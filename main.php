@@ -142,17 +142,6 @@ $discord->on('ready', function (Discord $discord) {
                 $prompt = $user->getPrompt($promptID);
 
                 if ($prompt === null) {
-                    if (time() - $time >= BigManageLimit::PROMPT_SECONDS_TIMEOUT) {
-                        unset($queue[$promptID]);
-                        $message->edit(
-                            MessageBuilder::new()->setContent(
-                                BigManageStrings::translateMessage(
-                                    BigManageGeneralMessage::EXCEPTION_THROWN,
-                                    $user
-                                )
-                            )
-                        );
-                    }
                     continue;
                 }
                 if (is_string($prompt)) {
