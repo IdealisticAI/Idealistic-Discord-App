@@ -192,10 +192,7 @@ $discord->on('ready', function (Discord $discord) {
                     $byteCount[$key] = strlen($piece);
                 }
                 $builder = MessageBuilder::new()->setContent(array_shift($pieces));
-                $attachments = array_merge(
-                    $prompt->getCreatedAttachments(),
-                    $prompt->getRequestedAttachments(false)
-                );
+                $attachments = $prompt->getCreatedAttachments();
 
                 if (!empty($attachments)) {
                     $byteLimit = floor(BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD] * 0.99);
