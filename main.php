@@ -126,10 +126,12 @@ $discord->on('ready', function (Discord $discord) {
             $user = $details[0];
             $message = $details[1];
             $time = $details[2];
+            $updateCooldown = $details[3];
 
             if (!($user instanceof BigManageUser)
                 || !($message instanceof Message)
-                || !is_int($time)) {
+                || !is_int($time)
+                || !is_numeric($updateCooldown)) {
                 unset($queue[$promptID]);
                 $message->edit(
                     MessageBuilder::new()->setContent(
@@ -144,33 +146,31 @@ $discord->on('ready', function (Discord $discord) {
                 if ($prompt === null) {
                     continue;
                 }
-                if (is_string($prompt)) {
-                    unset($queue[$promptID]);
-                    $message->edit(
-                        MessageBuilder::new()->setContent(
-                            BigManageStrings::translateMessage(
-                                $prompt,
-                                $user
-                            )
-                        )
-                    );
-                    return;
-                }
+                $processing = $prompt->isProcessing();
                 $replies = $prompt->getReplies();
 
                 if (empty($replies)) {
-                    unset($queue[$promptID]);
-                    $message->edit(
-                        MessageBuilder::new()->setContent(
-                            BigManageStrings::translateMessage(
-                                BigManageGeneralMessage::EXCEPTION_THROWN,
-                                $user
+                    if (!$processing) {
+                        unset($queue[$promptID]);
+                        $message->edit(
+                            MessageBuilder::new()->setContent(
+                                BigManageStrings::translateMessage(
+                                    BigManageGeneralMessage::EXCEPTION_THROWN,
+                                    $user
+                                )
                             )
-                        )
-                    );
-                    return;
+                        );
+                    }
+                    continue;
                 }
-                unset($queue[$promptID]);
+                if ($processing) {
+                    if (microtime(true) < $updateCooldown) {
+                        continue;
+                    }
+                    $queue[$promptID][3] = microtime(true) + 0.5;
+                } else {
+                    unset($queue[$promptID]);
+                }
                 $byteCount = array();
                 $messageAttachments = array();
                 $lastMessage = 0;
@@ -455,7 +455,7 @@ $discord->on('ready', function (Discord $discord) {
                 );
                 return;
             }
-            $queue[$prompt] = array($user, $newMessage, time());
+            $queue[$prompt] = array($user, $newMessage, time(), microtime(true));
         });
     });
 
