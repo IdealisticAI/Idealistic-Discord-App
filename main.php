@@ -586,11 +586,14 @@ $discord->on('ready', function (Discord $discord) {
                         );
                     }
                     $selectMenu->setListener(
-                        function (Interaction $interaction, Collection $options) use ($team) {
-                            $choice = $team->getAccesses()[$options[0]->getValue()];
+                        function (Interaction $interaction, Collection $options) use ($team, $user, $account) {
+                            $choice = $team->selectAccess(
+                                $options[0]->getValue(),
+                                $account
+                            );
                             $interaction->respondWithMessage(
                                 MessageBuilder::new()->setContent(
-                                    "You have selected the team '" . $choice->getTitle() . "'"
+                                    $choice->getTranslatedMessage($user)
                                 ),
                                 true
                             );
