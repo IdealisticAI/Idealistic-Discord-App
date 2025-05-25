@@ -537,8 +537,11 @@ $discord->on('ready', function (Discord $discord) {
                         $interaction->respondWithMessage(
                             MessageBuilder::new()->setContent(
                                 BigManageStrings::translateMessage(
-                                    "You already have established access to the team '"
-                                    . $team->getTitle() . "' and have no other team accesses.",
+                                    str_replace(
+                                        "{title}",
+                                        $team->getTitle(),
+                                        BigManageGeneralMessage::ALREADY_ESTABLISHED_ACCESS_AND_NO_EXTRA
+                                    ),
                                     $team
                                 )
                             ),
