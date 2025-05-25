@@ -184,7 +184,7 @@ $discord->on('ready', function (Discord $discord) {
                         $pieces,
                         str_split(
                             $reply->getAnswer(),
-                            2000
+                            BigManageLimit::MESSAGE_CHARACTER_LIMIT[BigManageAccessPlatform::DISCORD]
                         )
                     );
                 }
