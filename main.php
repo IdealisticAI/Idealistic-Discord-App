@@ -69,211 +69,175 @@ $discord->on('ready', function (Discord $discord) {
 
     // Separator
 
-    $discord->getLoop()->addPeriodicTimer(0.05, function () use ($discord) {
-        if (empty($discord->users->first())) {
-            return;
-        }
-        $notifications = BigManageNotifications::retrieve(BigManageAccessPlatform::DISCORD);
+    $discord->getLoop()->addPeriodicTimer(
+        BigManageLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
+        function () use ($discord) {
+            if (empty($discord->users->first())) {
+                return;
+            }
+            $notifications = BigManageNotifications::retrieve(BigManageAccessPlatform::DISCORD);
 
-        if (!empty($notifications)) {
-            foreach ($notifications as $notification) {
-                if (!($notification instanceof BigManageNotification)) {
-                    continue;
-                }
-                $identity = $notification->getUser()->getLastIdentity();
-
-                if ($identity === null
-                    || $identity->getPlatformID() !== BigManageAccessPlatform::DISCORD) {
-                    continue;
-                }
-                foreach ($discord->users as $user) {
-                    if (!($user instanceof User)) {
+            if (!empty($notifications)) {
+                foreach ($notifications as $notification) {
+                    if (!($notification instanceof BigManageNotification)) {
                         continue;
                     }
-                    if ($user->id === $identity->getPlatformUserID()) {
-                        if ($notification->process()) {
-                            if ($notification->getAttachmentName() !== null
-                                && $notification->getAttachmentContent() !== null
-                                || $notification->getMessage() !== null) {
-                                $builder = MessageBuilder::new();
+                    $identity = $notification->getUser()->getLastIdentity();
 
-                                if ($notification->getMessage() !== null) {
-                                    $builder->setContent($notification->getMessage());
-                                }
-                                if ($notification->getAttachmentName() !== null
-                                    && $notification->getAttachmentContent() !== null) {
-                                    $builder->addFileFromContent(
-                                        $notification->getAttachmentName(),
-                                        $notification->isBase64()
-                                            ? base64_decode($notification->getAttachmentContent())
-                                            : $notification->getAttachmentContent()
-                                    );
-                                }
-                                $user->getPrivateChannel()->done(function ($channel) use ($notification, $builder) {
-                                    $channel->sendMessage($builder);
-                                });
-                            }
+                    if ($identity === null
+                        || $identity->getPlatformID() !== BigManageAccessPlatform::DISCORD) {
+                        continue;
+                    }
+                    foreach ($discord->users as $user) {
+                        if (!($user instanceof User)) {
+                            continue;
                         }
-                        break;
+                        if ($user->id === $identity->getPlatformUserID()) {
+                            if ($notification->process()) {
+                                if ($notification->getAttachmentName() !== null
+                                    && $notification->getAttachmentContent() !== null
+                                    || $notification->getMessage() !== null) {
+                                    $builder = MessageBuilder::new();
+
+                                    if ($notification->getMessage() !== null) {
+                                        $builder->setContent($notification->getMessage());
+                                    }
+                                    if ($notification->getAttachmentName() !== null
+                                        && $notification->getAttachmentContent() !== null) {
+                                        $builder->addFileFromContent(
+                                            $notification->getAttachmentName(),
+                                            $notification->isBase64()
+                                                ? base64_decode($notification->getAttachmentContent())
+                                                : $notification->getAttachmentContent()
+                                        );
+                                    }
+                                    $user->getPrivateChannel()->done(function ($channel) use ($notification, $builder) {
+                                        $channel->sendMessage($builder);
+                                    });
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
             }
         }
-    });
+    );
 
-    $discord->getLoop()->addPeriodicTimer(0.05, function () use (&$queue) {
-        foreach ($queue as $promptID => $details) {
-            $user = $details[0];
-            $message = $details[1];
-            $time = $details[2];
-            $updateCooldown = $details[3];
+    $discord->getLoop()->addPeriodicTimer(
+        BigManageLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
+        function () use (&$queue) {
+            foreach ($queue as $promptID => $details) {
+                $user = $details[0];
+                $message = $details[1];
+                $time = $details[2];
+                $updateCooldown = $details[3];
 
-            if (!($user instanceof BigManageUser)
-                || !($message instanceof Message)
-                || !is_int($time)
-                || !is_numeric($updateCooldown)) {
-                unset($queue[$promptID]);
-                $message->edit(
-                    MessageBuilder::new()->setContent(
-                        BigManageGeneralMessage::EXCEPTION_THROWN
-                    )
-                );
-                continue;
-            }
-            try {
-                $prompt = $user->getPrompt($promptID);
-
-                if ($prompt === null) {
+                if (!($user instanceof BigManageUser)
+                    || !($message instanceof Message)
+                    || !is_int($time)
+                    || !is_numeric($updateCooldown)) {
+                    unset($queue[$promptID]);
+                    $message->edit(
+                        MessageBuilder::new()->setContent(
+                            BigManageGeneralMessage::EXCEPTION_THROWN
+                        )
+                    );
                     continue;
                 }
-                $processing = $prompt->isProcessing();
-                $replies = $prompt->getReplies();
+                try {
+                    $prompt = $user->getPrompt($promptID);
 
-                if (empty($replies)) {
-                    if (!$processing) {
-                        unset($queue[$promptID]);
-                        $message->edit(
-                            MessageBuilder::new()->setContent(
-                                BigManageStrings::translateMessage(
-                                    BigManageGeneralMessage::EXCEPTION_THROWN,
-                                    $user
+                    if ($prompt === null) {
+                        continue;
+                    }
+                    $processing = $prompt->isProcessing();
+                    $replies = $prompt->getReplies();
+
+                    if (empty($replies)) {
+                        if (!$processing) {
+                            unset($queue[$promptID]);
+                            $message->edit(
+                                MessageBuilder::new()->setContent(
+                                    BigManageStrings::translateMessage(
+                                        BigManageGeneralMessage::EXCEPTION_THROWN,
+                                        $user
+                                    )
                                 )
+                            );
+                        }
+                        continue;
+                    }
+                    if ($processing) {
+                        if (microtime(true) < $updateCooldown) {
+                            continue;
+                        }
+                        $queue[$promptID][3] = microtime(true) + 0.5;
+                    } else {
+                        unset($queue[$promptID]);
+                    }
+                    $byteCount = array();
+                    $messageAttachments = array();
+                    $lastMessage = 0;
+                    $pieces = array();
+
+                    foreach ($replies as $reply) {
+                        if (!($reply instanceof BigManageHistoryReply)) {
+                            continue;
+                        }
+                        $pieces = array_merge(
+                            $pieces,
+                            str_split(
+                                $reply->getAnswer(),
+                                BigManageLimit::MESSAGE_CHARACTER_LIMIT[BigManageAccessPlatform::DISCORD]
                             )
                         );
                     }
-                    continue;
-                }
-                if ($processing) {
-                    if (microtime(true) < $updateCooldown) {
-                        continue;
+                    foreach ($pieces as $key => $piece) {
+                        $byteCount[$key] = strlen($piece);
                     }
-                    $queue[$promptID][3] = microtime(true) + 0.5;
-                } else {
-                    unset($queue[$promptID]);
-                }
-                $byteCount = array();
-                $messageAttachments = array();
-                $lastMessage = 0;
-                $pieces = array();
-
-                foreach ($replies as $reply) {
-                    if (!($reply instanceof BigManageHistoryReply)) {
-                        continue;
-                    }
-                    $pieces = array_merge(
-                        $pieces,
-                        str_split(
-                            $reply->getAnswer(),
-                            BigManageLimit::MESSAGE_CHARACTER_LIMIT[BigManageAccessPlatform::DISCORD]
-                        )
+                    $builder = MessageBuilder::new()->setContent(array_shift($pieces));
+                    $attachments = array_merge(
+                        $prompt->getCreatedAttachments(),
+                        $prompt->getRequestedAttachments(false)
                     );
-                }
-                foreach ($pieces as $key => $piece) {
-                    $byteCount[$key] = strlen($piece);
-                }
-                $builder = MessageBuilder::new()->setContent(array_shift($pieces));
-                $attachments = array_merge(
-                    $prompt->getCreatedAttachments(),
-                    $prompt->getRequestedAttachments(false)
-                );
 
-                if (!empty($attachments)) {
-                    $byteLimit = floor(BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD] * 0.99);
+                    if (!empty($attachments)) {
+                        $byteLimit = floor(BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD] * 0.99);
 
-                    foreach ($attachments as $attachment) {
-                        if (!($attachment instanceof BigManageAttachment)) {
-                            continue;
-                        }
-                        $fullBytes = $attachment->getFullBytes();
+                        foreach ($attachments as $attachment) {
+                            if (!($attachment instanceof BigManageAttachment)) {
+                                continue;
+                            }
+                            $fullBytes = $attachment->getFullBytes();
 
-                        if ($attachment->getName() !== null
-                            && $fullBytes <= $byteLimit
-                            && ($attachment->nameHasFormat()
-                                || $attachment->getSimpleFormat() !== null)) {
-                            $data = $attachment->getDecodedData();
+                            if ($attachment->getName() !== null
+                                && $fullBytes <= $byteLimit
+                                && ($attachment->nameHasFormat()
+                                    || $attachment->getSimpleFormat() !== null)) {
+                                $data = $attachment->getDecodedData();
 
-                            if ($data !== null) {
-                                if (($byteCount[$lastMessage] ?? 0) + $fullBytes > $byteLimit) {
-                                    $lastMessage++;
-                                }
-                                if (array_key_exists($lastMessage, $byteCount)) {
-                                    $byteCount[$lastMessage] += $fullBytes;
-                                } else {
-                                    $byteCount[$lastMessage] = $fullBytes;
-                                }
-                                if (array_key_exists($lastMessage, $messageAttachments)) {
-                                    $messageAttachments[$lastMessage][] = $attachment;
-                                } else {
-                                    $messageAttachments[$lastMessage] = array($attachment);
+                                if ($data !== null) {
+                                    if (($byteCount[$lastMessage] ?? 0) + $fullBytes > $byteLimit) {
+                                        $lastMessage++;
+                                    }
+                                    if (array_key_exists($lastMessage, $byteCount)) {
+                                        $byteCount[$lastMessage] += $fullBytes;
+                                    } else {
+                                        $byteCount[$lastMessage] = $fullBytes;
+                                    }
+                                    if (array_key_exists($lastMessage, $messageAttachments)) {
+                                        $messageAttachments[$lastMessage][] = $attachment;
+                                    } else {
+                                        $messageAttachments[$lastMessage] = array($attachment);
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                $attachments = array_shift($messageAttachments);
+                    $attachments = array_shift($messageAttachments);
 
-                if (!empty($attachments)) {
-                    foreach ($attachments as $attachment) {
-                        if (!($attachment instanceof BigManageAttachment)) {
-                            continue;
-                        }
-                        $builder->addFileFromContent(
-                            $attachment->getName()
-                            . ($attachment->nameHasFormat()
-                                ? ""
-                                : "." . $attachment->getSimpleFormat()),
-                            $attachment->getDecodedData()
-                        );
-                    }
-                }
-                $message->edit($builder);
-
-                if (!empty($pieces)) {
-                    foreach ($pieces as $piece) {
-                        $builder = MessageBuilder::new()->setContent($piece);
-                        $attachments = array_shift($messageAttachments);
-
-                        if (!empty($attachments)) {
-                            foreach ($attachments as $attachment) {
-                                if (!($attachment instanceof BigManageAttachment)) {
-                                    continue;
-                                }
-                                $builder->addFileFromContent(
-                                    $attachment->getName()
-                                    . ($attachment->nameHasFormat()
-                                        ? ""
-                                        : "." . $attachment->getSimpleFormat()),
-                                    $attachment->getDecodedData()
-                                );
-                            }
-                        }
-                        $message->reply($builder);
-                    }
-                }
-                if (!empty($messageAttachments)) {
-                    foreach ($messageAttachments as $attachments) {
-                        $builder = MessageBuilder::new();
-
+                    if (!empty($attachments)) {
                         foreach ($attachments as $attachment) {
                             if (!($attachment instanceof BigManageAttachment)) {
                                 continue;
@@ -286,24 +250,66 @@ $discord->on('ready', function (Discord $discord) {
                                 $attachment->getDecodedData()
                             );
                         }
-                        $message->reply($builder);
                     }
+                    $message->edit($builder);
+
+                    if (!empty($pieces)) {
+                        foreach ($pieces as $piece) {
+                            $builder = MessageBuilder::new()->setContent($piece);
+                            $attachments = array_shift($messageAttachments);
+
+                            if (!empty($attachments)) {
+                                foreach ($attachments as $attachment) {
+                                    if (!($attachment instanceof BigManageAttachment)) {
+                                        continue;
+                                    }
+                                    $builder->addFileFromContent(
+                                        $attachment->getName()
+                                        . ($attachment->nameHasFormat()
+                                            ? ""
+                                            : "." . $attachment->getSimpleFormat()),
+                                        $attachment->getDecodedData()
+                                    );
+                                }
+                            }
+                            $message->reply($builder);
+                        }
+                    }
+                    if (!empty($messageAttachments)) {
+                        foreach ($messageAttachments as $attachments) {
+                            $builder = MessageBuilder::new();
+
+                            foreach ($attachments as $attachment) {
+                                if (!($attachment instanceof BigManageAttachment)) {
+                                    continue;
+                                }
+                                $builder->addFileFromContent(
+                                    $attachment->getName()
+                                    . ($attachment->nameHasFormat()
+                                        ? ""
+                                        : "." . $attachment->getSimpleFormat()),
+                                    $attachment->getDecodedData()
+                                );
+                            }
+                            $message->reply($builder);
+                        }
+                    }
+                } catch (Throwable $e) {
+                    BigManageError::storeThrowable(
+                        $user->getTeam(),
+                        $user,
+                        $e
+                    );
+                    $message->edit(MessageBuilder::new()->setContent(
+                        BigManageStrings::translateMessage(
+                            BigManageGeneralMessage::EXCEPTION_THROWN,
+                            $user
+                        )
+                    ));
                 }
-            } catch (Throwable $e) {
-                BigManageError::storeThrowable(
-                    $user->getTeam(),
-                    $user,
-                    $e
-                );
-                $message->edit(MessageBuilder::new()->setContent(
-                    BigManageStrings::translateMessage(
-                        BigManageGeneralMessage::EXCEPTION_THROWN,
-                        $user
-                    )
-                ));
             }
         }
-    });
+    );
 
     // Separator
 
