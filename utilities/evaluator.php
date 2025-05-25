@@ -6,7 +6,7 @@ class evaluator
         local_address = "https://www.idealistic.ai",
         website_path = "/contents/",
         timeout_seconds = 3,
-        storageDirectory = "/root/big_manage/evaluated/",
+        storageDirectory = "/root/big_manage_discord/evaluated/",
         exemptedFiles = array(
         "/var/www/.structure/library/base/communication.php",
         "/var/www/.structure/library/base/utilities.php",
