@@ -347,47 +347,14 @@ $discord->on('ready', function (Discord $discord) {
                 });
             });
         }
-        $account = new Account(Account::BIGMANAGE_APPLICATION_ID);
-        $account = $account->getAccounts()->getAccountFromType(
+        $user = BigManageTeamInitiator::findUser(
             BigManageAccessPlatform::DISCORD,
+            $author->id,
             $author->username
         );
 
-        if ($account === null) {
-            $message->reply(
-                MessageBuilder::new()->setContent(
-                    BigManageGeneralMessage::NO_DISCORD_ACCOUNT_CORRELATION_FOUND
-                )
-            );
-            return;
-        }
-        $team = new BigManageTeam($account);
-
-        if (!$team->hasEstablishedAccess()) {
-            if (empty($team->getAccesses())) {
-                $message->reply(
-                    MessageBuilder::new()->setContent(
-                        BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND
-                    )
-                );
-            } else {
-                $message->reply(
-                    MessageBuilder::new()->setContent(
-                        BigManageGeneralMessage::DISCORD_SELECT_TEAM_ACCESSES
-                    )
-                );
-            }
-            return;
-        }
-        $user = $team->findUser($account);
-
-        if ($user instanceof BigManageOutcome) {
-            $message->reply(
-                MessageBuilder::new()->setContent(
-                    $user->getTranslatedMessage($team)
-                )
-            );
-            return;
+        if (!($user instanceof BigManageUser)) {
+            $user = null;
         }
         $message->reply(
             MessageBuilder::new()->setContent(
@@ -396,7 +363,7 @@ $discord->on('ready', function (Discord $discord) {
                     $user
                 )
             )
-        )->done(function (Message $newMessage) use ($discord, $team, $user, $author, $message, &$queue) {
+        )->done(function (Message $newMessage) use ($discord, $user, $author, $message, &$queue) {
             $attachments = array();
 
             foreach ($message->attachments as $attachment) {
@@ -440,7 +407,8 @@ $discord->on('ready', function (Discord $discord) {
                 $object->referenced_message = $message->referenced_message;
                 $content = json_encode($object);
             }
-            $prompt = $user->createPrompt(
+            $prompt = BigManageTeamInitiator::createPrompt(
+                $user,
                 BigManageAccessPlatform::DISCORD,
                 $author->id,
                 $message->channel_id,
@@ -451,7 +419,7 @@ $discord->on('ready', function (Discord $discord) {
                 $attachments
             );
 
-            if ($prompt === null) {
+            if (!$prompt->isPositiveOutcome()) {
                 $newMessage->edit(
                     MessageBuilder::new()->setContent(
                         BigManageStrings::translateMessage(
@@ -462,7 +430,7 @@ $discord->on('ready', function (Discord $discord) {
                 );
                 return;
             }
-            $queue[$prompt] = array($user, $newMessage, time(), microtime(true));
+            $queue[$prompt->getRawMessage()] = array($user, $newMessage, time(), microtime(true));
         });
     });
 
