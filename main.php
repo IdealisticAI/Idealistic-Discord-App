@@ -140,7 +140,7 @@ $discord->on('ready', function (Discord $discord) {
                     unset($queue[$promptID]);
                     $message->edit(
                         MessageBuilder::new()->setContent(
-                            BigManageGeneralMessage::EXCEPTION_THROWN
+                            BigManageGeneralMessage::EXCEPTION_THROWN . " (#714820396)"
                         )
                     );
                     continue;
@@ -160,7 +160,7 @@ $discord->on('ready', function (Discord $discord) {
                             $message->edit(
                                 MessageBuilder::new()->setContent(
                                     BigManageStrings::translateMessage(
-                                        BigManageGeneralMessage::EXCEPTION_THROWN,
+                                        BigManageGeneralMessage::EXCEPTION_THROWN . " (#930182745)",
                                         $user
                                     )
                                 )
@@ -302,7 +302,7 @@ $discord->on('ready', function (Discord $discord) {
                     );
                     $message->edit(MessageBuilder::new()->setContent(
                         BigManageStrings::translateMessage(
-                            BigManageGeneralMessage::EXCEPTION_THROWN,
+                            BigManageGeneralMessage::EXCEPTION_THROWN . " (#814203967)",
                             $user
                         )
                     ));
@@ -423,7 +423,7 @@ $discord->on('ready', function (Discord $discord) {
                 $newMessage->edit(
                     MessageBuilder::new()->setContent(
                         BigManageStrings::translateMessage(
-                            BigManageGeneralMessage::EXCEPTION_THROWN,
+                            BigManageGeneralMessage::EXCEPTION_THROWN . " (#530184729)",
                             $user
                         )
                     )
@@ -580,7 +580,7 @@ $discord->on('ready', function (Discord $discord) {
                     $e
                 );
                 $interaction->respondWithMessage(MessageBuilder::new()->setContent(
-                    BigManageGeneralMessage::EXCEPTION_THROWN
+                    BigManageGeneralMessage::EXCEPTION_THROWN . " (#692847130)"
                 ));
             }
         }
