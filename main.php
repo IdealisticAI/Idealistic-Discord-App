@@ -153,8 +153,10 @@ $discord->on('ready', function (Discord $discord) {
                     }
                     $processing = $prompt->isProcessing();
                     $replies = $prompt->getReplies();
+                    $hasReplies = !empty($replies);
 
-                    if (empty($replies)) {
+                    if (!$hasReplies
+                        && !$prompt->sentNotification()) {
                         if (!$processing) {
                             unset($queue[$promptID]);
                             $message->edit(
@@ -181,22 +183,33 @@ $discord->on('ready', function (Discord $discord) {
                     $lastMessage = 0;
                     $pieces = array();
 
-                    foreach ($replies as $reply) {
-                        if (!($reply instanceof BigManageHistoryReply)) {
-                            continue;
+                    if ($hasReplies) {
+                        foreach ($replies as $reply) {
+                            if (!($reply instanceof BigManageHistoryReply)) {
+                                continue;
+                            }
+                            $pieces = array_merge(
+                                $pieces,
+                                str_split(
+                                    $reply->getAnswer(),
+                                    BigManageLimit::MESSAGE_CHARACTER_LIMIT[BigManageAccessPlatform::DISCORD]
+                                )
+                            );
                         }
-                        $pieces = array_merge(
-                            $pieces,
-                            str_split(
-                                $reply->getAnswer(),
-                                BigManageLimit::MESSAGE_CHARACTER_LIMIT[BigManageAccessPlatform::DISCORD]
-                            )
-                        );
+
+                        if (empty($pieces)) {
+                            $byteCount[$lastMessage] = strlen($message->content);
+                            $builder = MessageBuilder::new()->setContent($message->content);
+                        } else {
+                            foreach ($pieces as $key => $piece) {
+                                $byteCount[$key] = strlen($piece);
+                            }
+                            $builder = MessageBuilder::new()->setContent(array_shift($pieces));
+                        }
+                    } else {
+                        $byteCount[$lastMessage] = strlen($message->content);
+                        $builder = MessageBuilder::new()->setContent($message->content);
                     }
-                    foreach ($pieces as $key => $piece) {
-                        $byteCount[$key] = strlen($piece);
-                    }
-                    $builder = MessageBuilder::new()->setContent(array_shift($pieces));
                     $attachments = array_merge(
                         $prompt->getCreatedAttachments(),
                         $prompt->getRequestedAttachments(false)
