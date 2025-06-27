@@ -151,15 +151,31 @@ $discord->on('ready', function (Discord $discord) {
                     if ($prompt === null) {
                         continue;
                     }
-                    if ($prompt->isProcessing()) {
+                    $processing = $prompt->isProcessing();
+                    $replies = $prompt->getReplies();
+
+                    if ($processing) {
                         if (microtime(true) < $updateCooldown) {
                             continue;
                         }
-                        $queue[$promptID][3] = microtime(true) + 0.5;
-                    } else {
+                    } else if (time() - $time > BigManageLimit::HISTORY_REQUIRED_PROMPT_SECONDS_TIMEOUT) {
                         unset($queue[$promptID]);
+
+                        if (empty($replies)
+                            && !$prompt->sentNotification()) {
+                            $message->edit(
+                                MessageBuilder::new()->setContent(
+                                    BigManageStrings::translateMessage(
+                                        BigManageGeneralMessage::EXCEPTION_THROWN . " (#850195241)",
+                                        $user
+                                    )
+                                )
+                            );
+                            continue;
+                        }
+                    } else if (microtime(true) < $updateCooldown) {
+                        continue;
                     }
-                    $replies = $prompt->getReplies();
                     $byteCount = array();
                     $lastMessage = 0;
                     $pieces = array();
@@ -254,6 +270,11 @@ $discord->on('ready', function (Discord $discord) {
                     }
                     if ($canEdit) {
                         $message->edit($builder);
+                        $queue[$promptID][3] = microtime(true) + 0.5;
+
+                        if (!$processing) {
+                            unset($queue[$promptID]);
+                        }
                     }
 
                     if (!empty($pieces)) {
