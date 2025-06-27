@@ -151,26 +151,7 @@ $discord->on('ready', function (Discord $discord) {
                     if ($prompt === null) {
                         continue;
                     }
-                    $processing = $prompt->isProcessing();
-                    $replies = $prompt->getReplies();
-                    $hasReplies = !empty($replies);
-
-                    if (!$hasReplies
-                        && !$prompt->sentNotification()) {
-                        if (!$processing) {
-                            unset($queue[$promptID]);
-                            $message->edit(
-                                MessageBuilder::new()->setContent(
-                                    BigManageStrings::translateMessage(
-                                        BigManageGeneralMessage::EXCEPTION_THROWN . " (#930182745)",
-                                        $user
-                                    )
-                                )
-                            );
-                        }
-                        continue;
-                    }
-                    if ($processing) {
+                    if ($prompt->isProcessing()) {
                         if (microtime(true) < $updateCooldown) {
                             continue;
                         }
@@ -178,12 +159,13 @@ $discord->on('ready', function (Discord $discord) {
                     } else {
                         unset($queue[$promptID]);
                     }
+                    $replies = $prompt->getReplies();
                     $byteCount = array();
-                    $messageAttachments = array();
                     $lastMessage = 0;
                     $pieces = array();
+                    $canEdit = false;
 
-                    if ($hasReplies) {
+                    if (!empty($replies)) {
                         foreach ($replies as $reply) {
                             if (!($reply instanceof BigManageHistoryReply)) {
                                 continue;
@@ -205,6 +187,7 @@ $discord->on('ready', function (Discord $discord) {
                                 $byteCount[$key] = strlen($piece);
                             }
                             $builder = MessageBuilder::new()->setContent(array_shift($pieces));
+                            $canEdit = true;
                         }
                     } else {
                         $byteCount[$lastMessage] = strlen($message->content);
@@ -214,6 +197,7 @@ $discord->on('ready', function (Discord $discord) {
                         $prompt->getCreatedAttachments(),
                         $prompt->getRequestedAttachments(false)
                     );
+                    $messageAttachments = array();
 
                     if (!empty($attachments)) {
                         $byteLimit = floor(BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD] * 0.99);
@@ -247,24 +231,30 @@ $discord->on('ready', function (Discord $discord) {
                                 }
                             }
                         }
-                    }
-                    $attachments = array_shift($messageAttachments);
 
-                    if (!empty($attachments)) {
-                        foreach ($attachments as $attachment) {
-                            if (!($attachment instanceof BigManageAttachment)) {
-                                continue;
+                        if (!empty($messageAttachments)) {
+                            $attachments = array_shift($messageAttachments);
+
+                            if (!empty($attachments)) {
+                                foreach ($attachments as $attachment) {
+                                    if (!($attachment instanceof BigManageAttachment)) {
+                                        continue;
+                                    }
+                                    $builder->addFileFromContent(
+                                        $attachment->getName()
+                                        . ($attachment->nameHasFormat()
+                                            ? ""
+                                            : "." . $attachment->getSimpleFormat()),
+                                        $attachment->getDecodedData()
+                                    );
+                                    $canEdit = true;
+                                }
                             }
-                            $builder->addFileFromContent(
-                                $attachment->getName()
-                                . ($attachment->nameHasFormat()
-                                    ? ""
-                                    : "." . $attachment->getSimpleFormat()),
-                                $attachment->getDecodedData()
-                            );
                         }
                     }
-                    $message->edit($builder);
+                    if ($canEdit) {
+                        $message->edit($builder);
+                    }
 
                     if (!empty($pieces)) {
                         foreach ($pieces as $piece) {
