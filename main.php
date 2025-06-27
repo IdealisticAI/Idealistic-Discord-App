@@ -480,31 +480,21 @@ $discord->on('ready', function (Discord $discord) {
                     || $author->id === $discord->id) {
                     return;
                 }
-                $account = new Account(Account::BIGMANAGE_APPLICATION_ID);
-                $account = $account->getAccounts()->getAccountFromType(
+                $user = BigManageTeamInitiator::findUser(
                     BigManageAccessPlatform::DISCORD,
+                    $author->id,
                     $author->username
                 );
-
-                if ($account === null) {
-                    $interaction->respondWithMessage(
-                        MessageBuilder::new()->setContent(
-                            BigManageGeneralMessage::NO_DISCORD_ACCOUNT_CORRELATION_FOUND
-                        )
-                    );
-                    return;
-                }
-                $team = new BigManageTeam($account);
-                $user = $team->findUser($account);
 
                 if ($user instanceof BigManageOutcome) {
                     $interaction->respondWithMessage(
                         MessageBuilder::new()->setContent(
-                            $user->getTranslatedMessage($team)
+                            $user->getTranslatedMessage()
                         )
                     );
                     return;
                 }
+                $team = $user->getTeam();
                 $buildMenu = false;
 
                 if ($team->hasEstablishedAccess()) {
@@ -568,10 +558,10 @@ $discord->on('ready', function (Discord $discord) {
                         );
                     }
                     $selectMenu->setListener(
-                        function (Interaction $interaction, Collection $options) use ($team, $user, $account) {
+                        function (Interaction $interaction, Collection $options) use ($team, $user) {
                             $choice = $team->selectAccess(
                                 $options[0]->getValue(),
-                                $account
+                                $user->getAccount()
                             );
                             $interaction->respondWithMessage(
                                 MessageBuilder::new()->setContent(
