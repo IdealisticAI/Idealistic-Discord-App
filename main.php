@@ -511,7 +511,7 @@ $discord->on('ready', function (Discord $discord) {
                     if (empty($team->getAccesses())) {
                         $interaction->respondWithMessage(
                             MessageBuilder::new()->setContent(
-                                BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND
+                                BigManageGeneralMessage::EXCEPTION_THROWN . " (#102945725)"
                             ),
                             true
                         );
@@ -536,7 +536,7 @@ $discord->on('ready', function (Discord $discord) {
                     if (empty($team->getAccesses())) {
                         $interaction->respondWithMessage(
                             MessageBuilder::new()->setContent(
-                                BigManageGeneralMessage::NO_TEAM_ACCESSES_FOUND
+                                BigManageGeneralMessage::EXCEPTION_THROWN . " (#892034124)"
                             ),
                             true
                         );
