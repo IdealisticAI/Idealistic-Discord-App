@@ -161,7 +161,6 @@ $discord->on('ready', function (Discord $discord) {
                             continue;
                         }
                     } else {
-                        BigManageError::debug("test");
                         unset($queue[$promptID]);
 
                         if (empty($replies)
