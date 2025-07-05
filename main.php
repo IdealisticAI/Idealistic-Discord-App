@@ -138,11 +138,13 @@ $discord->on('ready', function (Discord $discord) {
                     || !is_int($time)
                     || !is_numeric($updateCooldown)) {
                     unset($queue[$promptID]);
-                    $message->edit(
-                        MessageBuilder::new()->setContent(
-                            BigManageGeneralMessage::EXCEPTION_THROWN . " (#714820396)"
-                        )
-                    );
+                    if ($message instanceof Message) {
+                        $message->edit(
+                            MessageBuilder::new()->setContent(
+                                BigManageGeneralMessage::EXCEPTION_THROWN . " (#714820396)"
+                            )
+                        );
+                    }
                     continue;
                 }
                 try {
@@ -151,14 +153,15 @@ $discord->on('ready', function (Discord $discord) {
                     if ($prompt === null) {
                         continue;
                     }
-                    $processing = $prompt->isProcessing();
                     $replies = $prompt->getReplies();
+                    $processing = $prompt->isProcessing();
 
                     if ($processing) {
                         if (microtime(true) < $updateCooldown) {
                             continue;
                         }
-                    } else if (time() - $time > BigManageLimit::HISTORY_REQUIRED_PROMPT_SECONDS_TIMEOUT) {
+                    } else {
+                        BigManageError::debug("test");
                         unset($queue[$promptID]);
 
                         if (empty($replies)
@@ -173,8 +176,6 @@ $discord->on('ready', function (Discord $discord) {
                             );
                             continue;
                         }
-                    } else if (microtime(true) < $updateCooldown) {
-                        continue;
                     }
                     $byteCount = array();
                     $lastMessage = 0;
@@ -270,19 +271,39 @@ $discord->on('ready', function (Discord $discord) {
                     }
                     if ($canEdit) {
                         $message->edit($builder);
-                        $queue[$promptID][3] = microtime(true) + 0.5;
 
-                        if (!$processing) {
-                            unset($queue[$promptID]);
+                        if ($processing) {
+                            $queue[$promptID][3] = microtime(true) + 0.5;
                         }
                     }
 
-                    if (!empty($pieces)) {
-                        foreach ($pieces as $piece) {
-                            $builder = MessageBuilder::new()->setContent($piece);
-                            $attachments = array_shift($messageAttachments);
+                    if (!$processing) {
+                        if (!empty($pieces)) {
+                            foreach ($pieces as $piece) {
+                                $builder = MessageBuilder::new()->setContent($piece);
+                                $attachments = array_shift($messageAttachments);
 
-                            if (!empty($attachments)) {
+                                if (!empty($attachments)) {
+                                    foreach ($attachments as $attachment) {
+                                        if (!($attachment instanceof BigManageAttachment)) {
+                                            continue;
+                                        }
+                                        $builder->addFileFromContent(
+                                            $attachment->getName()
+                                            . ($attachment->nameHasFormat()
+                                                ? ""
+                                                : "." . $attachment->getSimpleFormat()),
+                                            $attachment->getDecodedData()
+                                        );
+                                    }
+                                }
+                                $message->reply($builder);
+                            }
+                        }
+                        if (!empty($messageAttachments)) {
+                            foreach ($messageAttachments as $attachments) {
+                                $builder = MessageBuilder::new();
+
                                 foreach ($attachments as $attachment) {
                                     if (!($attachment instanceof BigManageAttachment)) {
                                         continue;
@@ -295,27 +316,8 @@ $discord->on('ready', function (Discord $discord) {
                                         $attachment->getDecodedData()
                                     );
                                 }
+                                $message->reply($builder);
                             }
-                            $message->reply($builder);
-                        }
-                    }
-                    if (!empty($messageAttachments)) {
-                        foreach ($messageAttachments as $attachments) {
-                            $builder = MessageBuilder::new();
-
-                            foreach ($attachments as $attachment) {
-                                if (!($attachment instanceof BigManageAttachment)) {
-                                    continue;
-                                }
-                                $builder->addFileFromContent(
-                                    $attachment->getName()
-                                    . ($attachment->nameHasFormat()
-                                        ? ""
-                                        : "." . $attachment->getSimpleFormat()),
-                                    $attachment->getDecodedData()
-                                );
-                            }
-                            $message->reply($builder);
                         }
                     }
                 } catch (Throwable $e) {
