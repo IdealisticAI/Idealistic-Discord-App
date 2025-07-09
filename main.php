@@ -522,7 +522,7 @@ $discord->on('ready', function (Discord $discord) {
                             MessageBuilder::new()->setContent(
                                 BigManageStrings::translateMessage(
                                     str_replace(
-                                        "{title}",
+                                        "{name}",
                                         $team->getTitle(),
                                         BigManageGeneralMessage::ALREADY_ESTABLISHED_ACCESS_AND_NO_EXTRA
                                     ),
