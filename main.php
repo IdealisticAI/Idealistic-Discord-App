@@ -165,13 +165,8 @@ $discord->on('ready', function (Discord $discord) {
 
                         if (empty($replies)
                             && !$prompt->sentNotification()) {
-                            $error = BigManageStrings::translateMessage(
-                                BigManageGeneralMessage::EXCEPTION_THROWN . " (#850195241)",
-                                $user
-                            );
-                            $prompt->addFinalFailedReply($error);
                             $message->edit(
-                                MessageBuilder::new()->setContent($error)
+                                MessageBuilder::new()->setContent($prompt->addFinalFailedReply())
                             );
                             continue;
                         }
