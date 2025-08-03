@@ -165,9 +165,13 @@ $discord->on('ready', function (Discord $discord) {
 
                         if (empty($replies)
                             && !$prompt->sentNotification()) {
-                            $message->edit(
-                                MessageBuilder::new()->setContent($prompt->addFinalFailedReply())
-                            );
+                            $failedReply = $prompt->addFinalFailedReply();
+
+                            if ($failedReply !== null) {
+                                $message->edit(
+                                    MessageBuilder::new()->setContent($failedReply)
+                                );
+                            }
                             continue;
                         }
                     }
