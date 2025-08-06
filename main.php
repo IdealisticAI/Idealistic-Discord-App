@@ -446,10 +446,7 @@ $discord->on('ready', function (Discord $discord) {
             if (!$prompt->isPositiveOutcome()) {
                 $newMessage->edit(
                     MessageBuilder::new()->setContent(
-                        BigManageStrings::translateMessage(
-                            BigManageGeneralMessage::EXCEPTION_THROWN . " (#530184729)",
-                            $user
-                        )
+                        $prompt->getTranslatedMessage($user)
                     )
                 );
                 return;
