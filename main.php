@@ -439,6 +439,7 @@ $discord->on('ready', function (Discord $discord) {
                 $message->id,
                 $author->username,
                 $author->displayname,
+                null,
                 $content,
                 $attachments
             );
