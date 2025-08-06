@@ -519,7 +519,7 @@ $discord->on('ready', function (Discord $discord) {
                                 BigManageStrings::translateMessage(
                                     str_replace(
                                         "{name}",
-                                        $team->getTitle(),
+                                        $team->getName(),
                                         BigManageGeneralMessage::ALREADY_ESTABLISHED_ACCESS_AND_NO_EXTRA
                                     ),
                                     $team
@@ -553,15 +553,10 @@ $discord->on('ready', function (Discord $discord) {
                     );
 
                     foreach ($team->getAccesses() as $index => $teamAccess) {
-                        $description = $teamAccess->getDescription();
                         $selectMenu->addOption(
                             Option::new(
-                                $teamAccess->getTitle(),
+                                $teamAccess->getName(),
                                 $index
-                            )->setDescription(
-                                $description === null
-                                    ? null
-                                    : substr($description, 0, 100)
                             )
                         );
                     }
