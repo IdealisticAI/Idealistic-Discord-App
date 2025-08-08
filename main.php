@@ -9,7 +9,6 @@ if ($token === null) {
 }
 ini_set('memory_limit', '-1');
 require '/root/vendor/autoload.php';
-
 require '/root/big_manage_discord/utilities/sql.php';
 require '/root/big_manage_discord/utilities/communication.php';
 require '/root/big_manage_discord/utilities/evaluator.php';
