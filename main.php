@@ -162,8 +162,7 @@ $discord->on('ready', function (Discord $discord) {
                     } else {
                         unset($queue[$promptID]);
 
-                        if (empty($replies)
-                            && !$prompt->sentNotification()) {
+                        if (empty($replies)) {
                             $failedReply = $prompt->addFinalFailedReply();
 
                             if ($failedReply !== null) {
@@ -181,7 +180,8 @@ $discord->on('ready', function (Discord $discord) {
 
                     if (!empty($replies)) {
                         foreach ($replies as $reply) {
-                            if (!($reply instanceof BigManageHistoryReply)) {
+                            if (!($reply instanceof BigManageHistoryReply)
+                                || $reply->sentNotification()) {
                                 continue;
                             }
                             $pieces = array_merge(
