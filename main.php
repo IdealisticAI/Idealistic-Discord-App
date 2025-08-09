@@ -435,10 +435,10 @@ $discord->on('ready', function (Discord $discord) {
                 BigManageAccessPlatform::DISCORD,
                 $author->id,
                 $message->channel_id,
+                null,
                 $message->id,
                 $author->username,
                 $author->displayname,
-                null,
                 $content,
                 $attachments
             );
