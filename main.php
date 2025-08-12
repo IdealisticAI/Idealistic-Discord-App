@@ -59,7 +59,7 @@ $discord->on('ready', function (Discord $discord) {
                 if ($member->id !== $discord->id
                     && !$member->getPermissions()?->administrator
                     && $member->displayname !== "."
-                    && !starts_with($member->displayname, ".#")) {
+                    && !str_starts_with($member->displayname, ".#")) {
                     $member->setNickname(".");
                 }
             }

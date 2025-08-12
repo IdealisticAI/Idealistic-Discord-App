@@ -50,7 +50,7 @@ function get_final_directory(): string
 
 function get_raw_google_doc(string $url, bool $returnHTML = false, int $timeoutSeconds = 0): ?string
 {
-    $html = starts_with($url, "http://") || starts_with($url, "https://")
+    $html = str_starts_with($url, "http://") || str_starts_with($url, "https://")
         ? timed_file_get_contents($url, $timeoutSeconds)
         : $url;
 
@@ -651,18 +651,6 @@ function get_domain_from_url(string $string, bool $removeSubdomains = false): ar
 function make_alpha_numeric(string $string): array|string|null
 {
     return preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '', $string));
-}
-
-function starts_with(string $haystack, string $needle): bool
-{
-    $length = strlen($needle);
-    return $length == 0 || (substr($haystack, 0, $length) === $needle);
-}
-
-function ends_with(string $haystack, string $needle): bool
-{
-    $length = strlen($needle);
-    return $length == 0 || substr($haystack, -$length) === $needle;
 }
 
 function random_string(int $length = 10, bool $lower = true, bool $capital = true, bool $numbers = true): ?string
