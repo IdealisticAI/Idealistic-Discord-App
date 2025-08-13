@@ -152,14 +152,15 @@ $discord->on('ready', function (Discord $discord) {
                     if ($prompt === null) {
                         continue;
                     }
-                    $replies = $prompt->getReplies();
                     $processing = $prompt->isProcessing();
 
                     if ($processing) {
                         if (microtime(true) < $updateCooldown) {
                             continue;
                         }
+                        $replies = $prompt->getReplies();
                     } else {
+                        $replies = $prompt->getReplies();
                         unset($queue[$promptID]);
 
                         if (empty($replies)) {
