@@ -147,6 +147,9 @@ $discord->on('ready', function (Discord $discord) {
                     continue;
                 }
                 try {
+                    if (microtime(true) < $updateCooldown) {
+                        continue;
+                    }
                     $prompt = $user->getPrompt($promptID);
 
                     if ($prompt === null) {
@@ -155,9 +158,7 @@ $discord->on('ready', function (Discord $discord) {
                     $processing = $prompt->isProcessing();
 
                     if ($processing) {
-                        if (microtime(true) < $updateCooldown) {
-                            continue;
-                        }
+                        $queue[$promptID][3] = microtime(true) + 0.5;
                         $replies = $prompt->getReplies();
                     } else {
                         $replies = $prompt->getReplies();
@@ -267,12 +268,9 @@ $discord->on('ready', function (Discord $discord) {
                             }
                         }
                     }
+
                     if ($canEdit) {
                         $message->edit($builder);
-
-                        if ($processing) {
-                            $queue[$promptID][3] = microtime(true) + 0.5;
-                        }
                     }
 
                     if (!$processing) {
