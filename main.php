@@ -456,7 +456,7 @@ $discord->on('ready', function (Discord $discord) {
 
     // Separator
 
-    $commandName = strtolower(BigManageVariable::APPLICATION_NAME);
+    $commandName = strtolower(BigManageVariable::APPLICATION_COMMAND);
     $commandBuilder = CommandBuilder::new()
         ->setName($commandName)
         ->setDescription("Manage your access");
