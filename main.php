@@ -497,7 +497,8 @@ $discord->on('ready', function (Discord $discord) {
                     $interaction->respondWithMessage(
                         MessageBuilder::new()->setContent(
                             $user->getTranslatedMessage()
-                        )
+                        ),
+                        true
                     );
                     return;
                 }
@@ -533,7 +534,7 @@ $discord->on('ready', function (Discord $discord) {
                     if (empty($team->getAccesses())) {
                         $interaction->respondWithMessage(
                             MessageBuilder::new()->setContent(
-                                BigManageGeneralMessage::EXCEPTION_THROWN . " (#892034124)"
+                                BigManageGeneralMessage::NO_ACCESS_TO_ESTABLISH
                             ),
                             true
                         );
@@ -576,6 +577,7 @@ $discord->on('ready', function (Discord $discord) {
                     );
                     $interaction->respondWithMessage(
                         MessageBuilder::new()->addComponent($selectMenu),
+                        true
                     );
                 }
             } catch (Throwable $e) {
@@ -584,9 +586,12 @@ $discord->on('ready', function (Discord $discord) {
                     null,
                     $e
                 );
-                $interaction->respondWithMessage(MessageBuilder::new()->setContent(
-                    BigManageGeneralMessage::EXCEPTION_THROWN . " (#692847130)"
-                ));
+                $interaction->respondWithMessage(
+                    MessageBuilder::new()->setContent(
+                        BigManageGeneralMessage::EXCEPTION_THROWN . " (#692847130)"
+                    ),
+                    true
+                );
             }
         }
     );
