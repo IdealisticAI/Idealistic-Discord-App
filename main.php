@@ -501,7 +501,7 @@ $discord->on('ready', function (Discord $discord) {
                     );
                     return;
                 }
-                $team = $user->getTeam();
+                $team = $user->getEvolvedTeam();
                 $buildMenu = false;
 
                 if ($team->hasEstablishedAccess()) {
