@@ -387,6 +387,7 @@ $discord->on('ready', function (Discord $discord) {
             )
         )->done(function (Message $newMessage) use ($discord, $user, $author, $message, &$queue) {
             $attachments = array();
+            $timezone = $user->getTimezone(false);
 
             foreach ($message->attachments as $attachment) {
                 $contents = @file_get_contents($attachment->url);
@@ -417,7 +418,9 @@ $discord->on('ready', function (Discord $discord) {
                         null,
                         base64_encode($contents),
                         null,
-                        true
+                        true,
+                        BigManageReader::getCurrentDate($timezone),
+                        $timezone->getCreationTimeZone()
                     );
                 }
             }
