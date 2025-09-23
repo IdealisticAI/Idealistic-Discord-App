@@ -160,7 +160,7 @@ $discord->on('ready', function (Discord $discord) {
                     $processing = $prompt->isProcessing();
 
                     if ($processing) {
-                        $queue[$promptID][3] = $microtime + 0.5;
+                        $queue[$promptID][3] = $microtime + (1.0 / 3.0);
                         $replies = $prompt->getReplies();
                     } else {
                         $replies = $prompt->getReplies();
