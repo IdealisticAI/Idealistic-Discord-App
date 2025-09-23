@@ -507,7 +507,7 @@ $discord->on('ready', function (Discord $discord) {
                     );
                     return;
                 }
-                $team = $user->getEvolvedTeam();
+                $team = $user->getEvolvedTeam(false);
                 $buildMenu = false;
 
                 if ($team->hasEstablishedAccess()) {
@@ -569,7 +569,8 @@ $discord->on('ready', function (Discord $discord) {
                         function (Interaction $interaction, Collection $options) use ($team, $user) {
                             $choice = $team->selectAccess(
                                 $options[0]->getValue(),
-                                $user->getAccount()
+                                $user->getAccount(),
+                                false
                             );
                             $interaction->respondWithMessage(
                                 MessageBuilder::new()->setContent(
