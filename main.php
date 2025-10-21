@@ -78,9 +78,6 @@ $discord->on('ready', function (Discord $discord) {
 
             if (!empty($notifications)) {
                 foreach ($notifications as $notification) {
-                    if (!($notification instanceof BigManageNotification)) {
-                        continue;
-                    }
                     $identity = $notification->getUser()->getLastIdentity();
 
                     if ($identity === null
@@ -184,8 +181,7 @@ $discord->on('ready', function (Discord $discord) {
 
                     if (!empty($replies)) {
                         foreach ($replies as $reply) {
-                            if (!($reply instanceof BigManageHistoryReply)
-                                || $reply->sentNotification()) {
+                            if ($reply->sentNotification()) {
                                 continue;
                             }
                             $pieces = array_merge(
