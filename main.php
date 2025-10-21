@@ -91,7 +91,7 @@ $discord->on('ready', function (Discord $discord) {
                         if (!($user instanceof User)) {
                             continue;
                         }
-                        if ($user->id === $identity->getPlatformUserID()) {
+                        if ($user->id == $identity->getPlatformUserID()) {
                             if ($notification->process()) {
                                 if ($notification->getAttachmentName() !== null
                                     && $notification->getAttachmentContent() !== null
