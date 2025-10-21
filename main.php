@@ -89,28 +89,27 @@ $discord->on('ready', function (Discord $discord) {
                             continue;
                         }
                         if ($user->id == $identity->getPlatformUserID()) {
-                            if ($notification->process()) {
-                                if ($notification->getAttachmentName() !== null
+                            if ($notification->process()
+                                && ($notification->getAttachmentName() !== null
                                     && $notification->getAttachmentContent() !== null
-                                    || $notification->getMessage() !== null) {
-                                    $builder = MessageBuilder::new();
+                                    || $notification->getMessage() !== null)) {
+                                $builder = MessageBuilder::new();
 
-                                    if ($notification->getMessage() !== null) {
-                                        $builder->setContent($notification->getMessage());
-                                    }
-                                    if ($notification->getAttachmentName() !== null
-                                        && $notification->getAttachmentContent() !== null) {
-                                        $builder->addFileFromContent(
-                                            $notification->getAttachmentName(),
-                                            $notification->isBase64()
-                                                ? base64_decode($notification->getAttachmentContent())
-                                                : $notification->getAttachmentContent()
-                                        );
-                                    }
-                                    $user->getPrivateChannel()->done(function ($channel) use ($notification, $builder) {
-                                        $channel->sendMessage($builder);
-                                    });
+                                if ($notification->getMessage() !== null) {
+                                    $builder->setContent($notification->getMessage());
                                 }
+                                if ($notification->getAttachmentName() !== null
+                                    && $notification->getAttachmentContent() !== null) {
+                                    $builder->addFileFromContent(
+                                        $notification->getAttachmentName(),
+                                        $notification->isBase64()
+                                            ? base64_decode($notification->getAttachmentContent())
+                                            : $notification->getAttachmentContent()
+                                    );
+                                }
+                                $user->getPrivateChannel()->done(function ($channel) use ($notification, $builder) {
+                                    $channel->sendMessage($builder);
+                                });
                             }
                             break;
                         }
@@ -418,7 +417,8 @@ $discord->on('ready', function (Discord $discord) {
                         null,
                         true,
                         BigManageReader::getCurrentDate($timezone),
-                        $timezone->getCreationTimeZone()
+                        $timezone->getTimeZone(),
+                        $user
                     );
                 }
             }
