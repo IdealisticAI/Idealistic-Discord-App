@@ -121,16 +121,6 @@ $discord->on('ready', function (Discord $discord) {
 
     $discord->getLoop()->addPeriodicTimer(
         BigManageLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
-        function () use ($discord) {
-            if (empty($discord->users->first())) {
-                return;
-            }
-            // todo queued prompts
-        }
-    );
-
-    $discord->getLoop()->addPeriodicTimer(
-        BigManageLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
         function () use (&$queue) {
             foreach ($queue as $promptID => $details) {
                 $user = $details[0];
