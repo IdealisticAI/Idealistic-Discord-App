@@ -153,6 +153,22 @@ $discord->on('ready', function (Discord $discord) {
                     if ($prompt === null) {
                         continue;
                     }
+                    if ($prompt->isQueued()
+                        || $prompt->wasQueued()) {
+                        $tryQueue = $prompt->tryQueue();
+
+                        if ($tryQueue === null) {
+                            unset($queue[$promptID]);
+                            $message->edit(
+                                MessageBuilder::new()->setContent(
+                                    BigManageGeneralMessage::EXCEPTION_THROWN . " (#579847912)"
+                                )
+                            );
+                            continue;
+                        } else if (!$tryQueue) {
+                            continue;
+                        }
+                    }
                     $processing = $prompt->isProcessing();
 
                     if ($processing) {
