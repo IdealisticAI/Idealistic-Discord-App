@@ -153,8 +153,7 @@ $discord->on('ready', function (Discord $discord) {
                     if ($prompt === null) {
                         continue;
                     }
-                    if ($prompt->isQueued()
-                        || $prompt->wasQueued()) {
+                    if ($prompt->isQueued()) {
                         $tryQueue = $prompt->tryQueue();
 
                         if ($tryQueue === null) {
