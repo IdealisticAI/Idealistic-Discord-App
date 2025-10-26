@@ -234,10 +234,7 @@ $discord->on('ready', function (Discord $discord) {
                         $byteCount[$lastMessage] = strlen($message->content);
                         $builder = MessageBuilder::new()->setContent($message->content);
                     }
-                    $attachments = array_merge(
-                        $prompt->getCreatedAttachments(),
-                        $prompt->getRequestedAttachments(false)
-                    );
+                    $attachments = $prompt->getCreatedAttachments();
                     $messageAttachments = array();
 
                     if (!empty($attachments)) {
