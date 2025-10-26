@@ -183,7 +183,9 @@ $discord->on('ready', function (Discord $discord) {
 
                     if ($processing) {
                         $queue[$promptID][3] = $microtime + $updateSeconds;
-                        $replies = $prompt->getReplies();
+                        $replies = $prompt->finishedBasicProcessing()
+                            ? $prompt->getReplies()
+                            : array();
                     } else {
                         $replies = $prompt->getReplies();
                         unset($queue[$promptID]);
