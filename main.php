@@ -122,6 +122,8 @@ $discord->on('ready', function (Discord $discord) {
     $discord->getLoop()->addPeriodicTimer(
         BigManageLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
         function () use (&$queue) {
+            $updateSeconds = 3;
+
             foreach ($queue as $promptID => $details) {
                 $user = $details[0];
                 $message = $details[1];
@@ -172,6 +174,7 @@ $discord->on('ready', function (Discord $discord) {
                                 $message->edit(
                                     MessageBuilder::new()->setContent($reply->getAnswer())
                                 );
+                                $queue[$promptID][3] = $microtime + $updateSeconds;
                             }
                             continue;
                         }
@@ -179,7 +182,7 @@ $discord->on('ready', function (Discord $discord) {
                     $processing = $prompt->isProcessing();
 
                     if ($processing) {
-                        $queue[$promptID][3] = $microtime + 1;
+                        $queue[$promptID][3] = $microtime + $updateSeconds;
                         $replies = $prompt->getReplies();
                     } else {
                         $replies = $prompt->getReplies();
