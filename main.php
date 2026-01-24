@@ -28,7 +28,7 @@ use Discord\WebSockets\Intents;
 
 $files = evaluator::run(
     array(
-        "/var/www/.structure/library/bigmanage/init.php"
+        "/var/www/.structure/library/idealistic_office/init.php"
     )
 );
 
