@@ -12,7 +12,7 @@ $unsigned_59bit_full_Integer = 576460752303423488;
 
 $backup_domain = "www.idealistic.ai";
 
-$keys_from_file_directory = "/root/big_manage_discord/private/credentials/";
+$keys_from_file_directory = "/root/idealistic_discord/private/credentials/";
 
 // Constants
 

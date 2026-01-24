@@ -1,5 +1,5 @@
 <?php
-require '/root/big_manage_discord/utilities/utilities.php';
+require '/root/idealistic_discord/utilities/utilities.php';
 $token = get_keys_from_file(
     "discord_token"
 );
@@ -9,9 +9,9 @@ if ($token === null) {
 }
 ini_set('memory_limit', '-1');
 require '/root/vendor/autoload.php';
-require '/root/big_manage_discord/utilities/sql.php';
-require '/root/big_manage_discord/utilities/communication.php';
-require '/root/big_manage_discord/utilities/evaluator.php';
+require '/root/idealistic_discord/utilities/sql.php';
+require '/root/idealistic_discord/utilities/communication.php';
+require '/root/idealistic_discord/utilities/evaluator.php';
 
 use Discord\Builders\CommandBuilder;
 use Discord\Builders\Components\Option;
