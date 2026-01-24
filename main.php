@@ -69,19 +69,19 @@ $discord->on('ready', function (Discord $discord) {
     // Separator
 
     $discord->getLoop()->addPeriodicTimer(
-        BigManageLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
+        IdealisticOfficeLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
         function () use ($discord) {
             if (empty($discord->users->first())) {
                 return;
             }
-            $notifications = BigManageNotifications::retrieve(BigManageAccessPlatform::DISCORD);
+            $notifications = IdealisticOfficeNotifications::retrieve(IdealisticOfficeAccessPlatform::DISCORD);
 
             if (!empty($notifications)) {
                 foreach ($notifications as $notification) {
                     $identity = $notification->getUser()->getLastIdentity();
 
                     if ($identity === null
-                        || $identity->getPlatformID() !== BigManageAccessPlatform::DISCORD) {
+                        || $identity->getPlatformID() !== IdealisticOfficeAccessPlatform::DISCORD) {
                         continue;
                     }
                     foreach ($discord->users as $user) {
@@ -120,7 +120,7 @@ $discord->on('ready', function (Discord $discord) {
     );
 
     $discord->getLoop()->addPeriodicTimer(
-        BigManageLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
+        IdealisticOfficeLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
         function () use (&$queue) {
             $updateSeconds = 3;
 
@@ -130,7 +130,7 @@ $discord->on('ready', function (Discord $discord) {
                 $time = $details[2];
                 $updateCooldown = $details[3];
 
-                if (!($user instanceof BigManageUser)
+                if (!($user instanceof IdealisticOfficeUser)
                     || !($message instanceof Message)
                     || !is_int($time)
                     || !is_numeric($updateCooldown)) {
@@ -138,7 +138,7 @@ $discord->on('ready', function (Discord $discord) {
                     if ($message instanceof Message) {
                         $message->edit(
                             MessageBuilder::new()->setContent(
-                                BigManageGeneralMessage::EXCEPTION_THROWN . " (#714820396)"
+                                IdealisticOfficeGeneralMessage::EXCEPTION_THROWN . " (#714820396)"
                             )
                         );
                     }
@@ -162,7 +162,7 @@ $discord->on('ready', function (Discord $discord) {
                             unset($queue[$promptID]);
                             $message->edit(
                                 MessageBuilder::new()->setContent(
-                                    BigManageGeneralMessage::EXCEPTION_THROWN . " (#579847912)"
+                                    IdealisticOfficeGeneralMessage::EXCEPTION_THROWN . " (#579847912)"
                                 )
                             );
                             continue;
@@ -215,7 +215,7 @@ $discord->on('ready', function (Discord $discord) {
                                 $pieces,
                                 str_split(
                                     $reply->getAnswer(),
-                                    BigManageLimit::MESSAGE_CHARACTER_LIMIT[BigManageAccessPlatform::DISCORD]
+                                    IdealisticOfficeLimit::MESSAGE_CHARACTER_LIMIT[IdealisticOfficeAccessPlatform::DISCORD]
                                 )
                             );
                         }
@@ -238,10 +238,10 @@ $discord->on('ready', function (Discord $discord) {
                     $messageAttachments = array();
 
                     if (!empty($attachments)) {
-                        $byteLimit = floor(BigManageLimit::ATTACHMENT_BYTES_LIMIT[BigManageAccessPlatform::DISCORD] * 0.99);
+                        $byteLimit = floor(IdealisticOfficeLimit::ATTACHMENT_BYTES_LIMIT[IdealisticOfficeAccessPlatform::DISCORD] * 0.99);
 
                         foreach ($attachments as $attachment) {
-                            if (!($attachment instanceof BigManageAttachment)) {
+                            if (!($attachment instanceof IdealisticOfficeAttachment)) {
                                 continue;
                             }
                             $fullBytes = $attachment->getFullBytes();
@@ -275,7 +275,7 @@ $discord->on('ready', function (Discord $discord) {
 
                             if (!empty($attachments)) {
                                 foreach ($attachments as $attachment) {
-                                    if (!($attachment instanceof BigManageAttachment)) {
+                                    if (!($attachment instanceof IdealisticOfficeAttachment)) {
                                         continue;
                                     }
                                     $builder->addFileFromContent(
@@ -303,7 +303,7 @@ $discord->on('ready', function (Discord $discord) {
 
                                 if (!empty($attachments)) {
                                     foreach ($attachments as $attachment) {
-                                        if (!($attachment instanceof BigManageAttachment)) {
+                                        if (!($attachment instanceof IdealisticOfficeAttachment)) {
                                             continue;
                                         }
                                         $builder->addFileFromContent(
@@ -323,7 +323,7 @@ $discord->on('ready', function (Discord $discord) {
                                 $builder = MessageBuilder::new();
 
                                 foreach ($attachments as $attachment) {
-                                    if (!($attachment instanceof BigManageAttachment)) {
+                                    if (!($attachment instanceof IdealisticOfficeAttachment)) {
                                         continue;
                                     }
                                     $builder->addFileFromContent(
@@ -339,14 +339,14 @@ $discord->on('ready', function (Discord $discord) {
                         }
                     }
                 } catch (Throwable $e) {
-                    BigManageError::storeThrowable(
+                    IdealisticOfficeError::storeThrowable(
                         $user->getTeam(),
                         $user,
                         $e
                     );
                     $message->edit(MessageBuilder::new()->setContent(
-                        BigManageStrings::translateMessage(
-                            BigManageGeneralMessage::EXCEPTION_THROWN . " (#814203967)",
+                        IdealisticOfficeStrings::translateMessage(
+                            IdealisticOfficeGeneralMessage::EXCEPTION_THROWN . " (#814203967)",
                             $user
                         )
                     ));
@@ -391,19 +391,19 @@ $discord->on('ready', function (Discord $discord) {
                 });
             });
         }
-        $user = BigManageTeamInitiator::findUser(
-            BigManageAccessPlatform::DISCORD,
+        $user = IdealisticOfficeTeamInitiator::findUser(
+            IdealisticOfficeAccessPlatform::DISCORD,
             $author->id,
             $author->username
         );
 
-        if (!($user instanceof BigManageUser)) {
+        if (!($user instanceof IdealisticOfficeUser)) {
             $user = null;
         }
         $message->reply(
             MessageBuilder::new()->setContent(
-                BigManageStrings::translateMessage(
-                    BigManageGeneralMessage::PROMPT_WAIT_RESPONSE,
+                IdealisticOfficeStrings::translateMessage(
+                    IdealisticOfficeGeneralMessage::PROMPT_WAIT_RESPONSE,
                     $user
                 )
             )
@@ -420,15 +420,15 @@ $discord->on('ready', function (Discord $discord) {
                 if ($contents === false) {
                     $newMessage->edit(
                         MessageBuilder::new()->setContent(
-                            BigManageStrings::translateMessage(
-                                BigManageGeneralMessage::ATTACHMENT_FAILED_PROCESSING,
+                            IdealisticOfficeStrings::translateMessage(
+                                IdealisticOfficeGeneralMessage::ATTACHMENT_FAILED_PROCESSING,
                                 $user
                             )
                         )
                     );
                     return;
                 } else {
-                    $attachments[] = new BigManageAttachment(
+                    $attachments[] = new IdealisticOfficeAttachment(
                         null,
                         $attachment->filename,
                         $attachment->description,
@@ -441,7 +441,7 @@ $discord->on('ready', function (Discord $discord) {
                         base64_encode($contents),
                         null,
                         true,
-                        BigManageReader::getCurrentDate($timezone),
+                        IdealisticOfficeReader::getCurrentDate($timezone),
                         $timezone->getTimeZone(),
                         $user
                     );
@@ -455,9 +455,9 @@ $discord->on('ready', function (Discord $discord) {
                 $object->referenced_message = $message->referenced_message;
                 $content = json_encode($object);
             }
-            $prompt = BigManageTeamInitiator::createPrompt(
+            $prompt = IdealisticOfficeTeamInitiator::createPrompt(
                 $user,
-                BigManageAccessPlatform::DISCORD,
+                IdealisticOfficeAccessPlatform::DISCORD,
                 $author->id,
                 $message->channel_id,
                 null,
@@ -482,7 +482,7 @@ $discord->on('ready', function (Discord $discord) {
 
     // Separator
 
-    $commandName = strtolower(BigManageVariable::APPLICATION_COMMAND);
+    $commandName = strtolower(IdealisticOfficeVariable::APPLICATION_COMMAND);
     $commandBuilder = CommandBuilder::new()
         ->setName($commandName)
         ->setDescription("Manage your access");
@@ -513,13 +513,13 @@ $discord->on('ready', function (Discord $discord) {
                     || $author->id === $discord->id) {
                     return;
                 }
-                $user = BigManageTeamInitiator::findUser(
-                    BigManageAccessPlatform::DISCORD,
+                $user = IdealisticOfficeTeamInitiator::findUser(
+                    IdealisticOfficeAccessPlatform::DISCORD,
                     $author->id,
                     $author->username
                 );
 
-                if ($user instanceof BigManageOutcome) {
+                if ($user instanceof IdealisticOfficeOutcome) {
                     $interaction->respondWithMessage(
                         MessageBuilder::new()->setContent(
                             $user->getTranslatedMessage()
@@ -535,18 +535,18 @@ $discord->on('ready', function (Discord $discord) {
                     if (empty($team->getAccesses())) {
                         $interaction->respondWithMessage(
                             MessageBuilder::new()->setContent(
-                                BigManageGeneralMessage::EXCEPTION_THROWN . " (#102945725)"
+                                IdealisticOfficeGeneralMessage::EXCEPTION_THROWN . " (#102945725)"
                             ),
                             true
                         );
                     } else if (sizeof($team->getAccesses()) === 1) {
                         $interaction->respondWithMessage(
                             MessageBuilder::new()->setContent(
-                                BigManageStrings::translateMessage(
+                                IdealisticOfficeStrings::translateMessage(
                                     str_replace(
                                         "{name}",
                                         $team->getName(),
-                                        BigManageGeneralMessage::ALREADY_ESTABLISHED_ACCESS_AND_NO_EXTRA
+                                        IdealisticOfficeGeneralMessage::ALREADY_ESTABLISHED_ACCESS_AND_NO_EXTRA
                                     ),
                                     $team
                                 )
@@ -560,7 +560,7 @@ $discord->on('ready', function (Discord $discord) {
                     if (empty($team->getAccesses())) {
                         $interaction->respondWithMessage(
                             MessageBuilder::new()->setContent(
-                                BigManageGeneralMessage::NO_ACCESS_TO_ESTABLISH
+                                IdealisticOfficeGeneralMessage::NO_ACCESS_TO_ESTABLISH
                             ),
                             true
                         );
@@ -608,14 +608,14 @@ $discord->on('ready', function (Discord $discord) {
                     );
                 }
             } catch (Throwable $e) {
-                BigManageError::storeThrowable(
+                IdealisticOfficeError::storeThrowable(
                     null,
                     null,
                     $e
                 );
                 $interaction->respondWithMessage(
                     MessageBuilder::new()->setContent(
-                        BigManageGeneralMessage::EXCEPTION_THROWN . " (#692847130)"
+                        IdealisticOfficeGeneralMessage::EXCEPTION_THROWN . " (#692847130)"
                     ),
                     true
                 );

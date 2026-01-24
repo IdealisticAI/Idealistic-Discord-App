@@ -1,1 +1,1 @@
-Discord implementation of the BigManage application.
+Discord implementation of the Idealistic application.
