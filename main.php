@@ -122,7 +122,7 @@ $discord->on('ready', function (Discord $discord) {
     $discord->getLoop()->addPeriodicTimer(
         IdealisticOfficeLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
         function () use (&$queue) {
-            $updateSeconds = 3;
+            $updateSeconds = 4;
 
             foreach ($queue as $promptID => $details) {
                 $user = $details[0];
