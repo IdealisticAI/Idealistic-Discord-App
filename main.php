@@ -180,14 +180,11 @@ $discord->on('ready', function (Discord $discord) {
                         }
                     }
                     $processing = $prompt->isProcessing();
+                    $replies = $prompt->getReplies();
 
                     if ($processing) {
                         $queue[$promptID][3] = $microtime + $updateSeconds;
-                        $replies = $prompt->finishedBasicProcessing()
-                            ? $prompt->getReplies()
-                            : array();
                     } else {
-                        $replies = $prompt->getReplies();
                         unset($queue[$promptID]);
 
                         if (empty($replies)) {
