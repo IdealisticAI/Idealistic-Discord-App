@@ -29,12 +29,7 @@ function load_previous_sql_database(): void
         set_sql_credentials(
             $current_sql_database[0],
             $current_sql_database[1],
-            $current_sql_database[2],
-            null,
-            null,
-            null,
-            false,
-            "5 minutes"
+            $current_sql_database[2]
         );
     } else {
         load_sql_database();
@@ -56,12 +51,7 @@ function load_sql_database(string $file = __SqlDatabaseServers::STORAGE): void
         set_sql_credentials(
             $current_sql_database[0],
             $current_sql_database[1],
-            $current_sql_database[2],
-            null,
-            null,
-            null,
-            false,
-            "5 minutes"
+            $current_sql_database[2]
         );
     }
 }
