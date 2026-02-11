@@ -50,7 +50,6 @@ $discord = new Discord([
 ]);
 
 $discord->on('ready', function (Discord $discord) {
-    load_sql_database();
     $queue = array();
 
     foreach ($discord->guilds as $guild) {
