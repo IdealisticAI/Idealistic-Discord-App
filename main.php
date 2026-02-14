@@ -185,17 +185,6 @@ $discord->on('ready', function (Discord $discord) {
                         $queue[$promptID][3] = $microtime + $updateSeconds;
                     } else {
                         unset($queue[$promptID]);
-
-                        if (empty($replies)) {
-                            $failedReply = $prompt->addFinalFailedReply();
-
-                            if ($failedReply !== null) {
-                                $message->edit(
-                                    MessageBuilder::new()->setContent($failedReply)
-                                );
-                            }
-                            continue;
-                        }
                     }
                     $byteCount = array();
                     $lastMessage = 0;
@@ -237,9 +226,6 @@ $discord->on('ready', function (Discord $discord) {
                         $byteLimit = floor(IdealisticOfficeLimit::ATTACHMENT_BYTES_LIMIT[IdealisticOfficeAccessPlatform::DISCORD] * 0.99);
 
                         foreach ($attachments as $attachment) {
-                            if (!($attachment instanceof IdealisticOfficeAttachment)) {
-                                continue;
-                            }
                             $fullBytes = $attachment->getFullBytes();
 
                             if ($attachment->getName() !== null
