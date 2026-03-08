@@ -193,9 +193,6 @@ $discord->on('ready', function (Discord $discord) {
 
                     if (!empty($replies)) {
                         foreach ($replies as $reply) {
-                            if ($reply->sentNotification()) {
-                                continue;
-                            }
                             $pieces = array_merge(
                                 $pieces,
                                 str_split(
