@@ -227,8 +227,7 @@ $discord->on('ready', function (Discord $discord) {
 
                             if ($attachment->getName() !== null
                                 && $fullBytes <= $byteLimit
-                                && ($attachment->nameHasFormat()
-                                    || $attachment->getSimpleFormat() !== null)) {
+                                && $attachment->getSimpleFormat() !== null) {
                                 $data = $attachment->getDecodedData();
 
                                 if ($data !== null) {
@@ -257,11 +256,12 @@ $discord->on('ready', function (Discord $discord) {
                                     if (!($attachment instanceof IdealisticOfficeAttachment)) {
                                         continue;
                                     }
+                                    $format = $attachment->getSimpleFormat();
                                     $builder->addFileFromContent(
                                         $attachment->getName()
-                                        . ($attachment->nameHasFormat()
+                                        . ($format === null
                                             ? ""
-                                            : "." . $attachment->getSimpleFormat()),
+                                            : "." . $format),
                                         $attachment->getDecodedData()
                                     );
                                     $canEdit = true;
@@ -285,11 +285,12 @@ $discord->on('ready', function (Discord $discord) {
                                         if (!($attachment instanceof IdealisticOfficeAttachment)) {
                                             continue;
                                         }
+                                        $format = $attachment->getSimpleFormat();
                                         $builder->addFileFromContent(
                                             $attachment->getName()
-                                            . ($attachment->nameHasFormat()
+                                            . ($format === null
                                                 ? ""
-                                                : "." . $attachment->getSimpleFormat()),
+                                                : "." . $format),
                                             $attachment->getDecodedData()
                                         );
                                     }
@@ -305,11 +306,12 @@ $discord->on('ready', function (Discord $discord) {
                                     if (!($attachment instanceof IdealisticOfficeAttachment)) {
                                         continue;
                                     }
+                                    $format = $attachment->getSimpleFormat();
                                     $builder->addFileFromContent(
                                         $attachment->getName()
-                                        . ($attachment->nameHasFormat()
+                                        . ($format === null
                                             ? ""
-                                            : "." . $attachment->getSimpleFormat()),
+                                            : "." . $format),
                                         $attachment->getDecodedData()
                                     );
                                 }
