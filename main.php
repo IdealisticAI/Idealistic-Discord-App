@@ -154,30 +154,6 @@ $discord->on('ready', function (Discord $discord) {
                     if ($prompt === null) {
                         continue;
                     }
-                    if ($prompt->isQueued()) {
-                        $tryQueue = $prompt->tryQueue();
-
-                        if ($tryQueue === null) {
-                            unset($queue[$promptID]);
-                            $message->edit(
-                                MessageBuilder::new()->setContent(
-                                    IdealisticOfficeGeneralMessage::EXCEPTION_THROWN . " (#579847912)"
-                                )
-                            );
-                            continue;
-                        } else if (!$tryQueue) {
-                            $reply = $prompt->getFailedReplies()[0] ?? null;
-
-                            if ($reply !== null
-                                && $reply->getAnswer() !== $message->content) {
-                                $message->edit(
-                                    MessageBuilder::new()->setContent($reply->getAnswer())
-                                );
-                                $queue[$promptID][3] = $microtime + $updateSeconds;
-                            }
-                            continue;
-                        }
-                    }
                     $processing = $prompt->isProcessing();
                     $replies = $prompt->getReplies();
 
