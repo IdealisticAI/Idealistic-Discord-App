@@ -13,14 +13,9 @@ require '/root/idealistic_discord/utilities/sql.php';
 require '/root/idealistic_discord/utilities/communication.php';
 require '/root/idealistic_discord/utilities/evaluator.php';
 
-use Discord\Builders\CommandBuilder;
-use Discord\Builders\Components\Option;
-use Discord\Builders\Components\SelectMenu;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
-use Discord\Helpers\Collection;
 use Discord\Parts\Channel\Message;
-use Discord\Parts\Interactions\Interaction;
 use Discord\Parts\User\Member;
 use Discord\Parts\User\User;
 use Discord\WebSockets\Event;
@@ -435,149 +430,6 @@ $discord->on('ready', function (Discord $discord) {
             $queue[$prompt->getRawMessage()] = array($user, $newMessage, time(), microtime(true));
         });
     });
-
-    // Separator
-
-    $commandName = strtolower(IdealisticOfficeVariable::APPLICATION_COMMAND);
-    $commandBuilder = CommandBuilder::new()
-        ->setName($commandName)
-        ->setDescription("Manage your access");
-
-    try {
-        $discord->application->commands->save(
-            $discord->application->commands->create(
-                $commandBuilder->toArray()
-            )
-        );
-    } catch (Throwable $e) {
-        exit();
-    }
-    $discord->listenCommand(
-        $commandName,
-        function (Interaction $interaction) use ($discord) {
-            try {
-                if ($interaction->member !== null) {
-                    $interaction->respondWithMessage(
-                        MessageBuilder::new()->setContent("This command can only be used in private messages."),
-                        true
-                    );
-                    return;
-                }
-                $author = $interaction->user;
-
-                if ($author === null
-                    || $author->id === $discord->id) {
-                    return;
-                }
-                $user = IdealisticOfficeTeamInitiator::findUser(
-                    IdealisticOfficeAccessPlatform::DISCORD,
-                    $author->id,
-                    $author->username
-                );
-
-                if ($user instanceof IdealisticOfficeOutcome) {
-                    $interaction->respondWithMessage(
-                        MessageBuilder::new()->setContent(
-                            $user->getTranslatedMessage()
-                        ),
-                        true
-                    );
-                    return;
-                }
-                $team = $user->getEvolvedTeam(false);
-                $buildMenu = false;
-
-                if ($team->hasEstablishedAccess()) {
-                    if (empty($team->getAccesses())) {
-                        $interaction->respondWithMessage(
-                            MessageBuilder::new()->setContent(
-                                IdealisticOfficeGeneralMessage::EXCEPTION_THROWN . " (#102945725)"
-                            ),
-                            true
-                        );
-                    } else if (sizeof($team->getAccesses()) === 1) {
-                        $interaction->respondWithMessage(
-                            MessageBuilder::new()->setContent(
-                                IdealisticOfficeStrings::translateMessage(
-                                    str_replace(
-                                        "{name}",
-                                        $team->getName(),
-                                        IdealisticOfficeGeneralMessage::ALREADY_ESTABLISHED_ACCESS_AND_NO_EXTRA
-                                    ),
-                                    $team
-                                )
-                            ),
-                            true
-                        );
-                    } else {
-                        $buildMenu = true;
-                    }
-                } else {
-                    if (empty($team->getAccesses())) {
-                        $interaction->respondWithMessage(
-                            MessageBuilder::new()->setContent(
-                                IdealisticOfficeGeneralMessage::NO_ACCESS_TO_ESTABLISH
-                            ),
-                            true
-                        );
-                    } else {
-                        $buildMenu = true;
-                    }
-                }
-
-                if ($buildMenu) {
-                    $selectMenu = SelectMenu::new()->setPlaceholder(
-                        "Please select a team to access."
-                    )->setMinValues(
-                        1
-                    )->setMaxValues(
-                        1
-                    );
-
-                    foreach ($team->getAccesses() as $index => $teamAccess) {
-                        $selectMenu->addOption(
-                            Option::new(
-                                $teamAccess->getName(),
-                                $index
-                            )
-                        );
-                    }
-                    $selectMenu->setListener(
-                        function (Interaction $interaction, Collection $options) use ($team, $user) {
-                            $choice = $team->selectAccess(
-                                $options[0]->getValue(),
-                                $user->getAccount(),
-                                false
-                            );
-                            $interaction->respondWithMessage(
-                                MessageBuilder::new()->setContent(
-                                    $choice->getTranslatedMessage($user)
-                                ),
-                                true
-                            );
-                        },
-                        $discord
-                    );
-                    $interaction->respondWithMessage(
-                        MessageBuilder::new()->addComponent($selectMenu),
-                        true
-                    );
-                }
-            } catch (Throwable $e) {
-                IdealisticOfficeError::storeThrowable(
-                    null,
-                    null,
-                    $e
-                );
-                $interaction->respondWithMessage(
-                    MessageBuilder::new()->setContent(
-                        IdealisticOfficeGeneralMessage::EXCEPTION_THROWN . " (#692847130)"
-                    ),
-                    true
-                );
-            }
-        }
-    );
 
 });
 
