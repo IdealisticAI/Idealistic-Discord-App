@@ -161,20 +161,16 @@ function timed_file_get_contents(
     ?array $contextOptions = null
 ): bool|string
 {
-    if ($timeoutSeconds > 0) {
-        if ($contextOptions !== null) {
-            $contextOptions['http']['timeout'] = $timeoutSeconds;
-
-            if (!array_key_exists('follow_location', $contextOptions['http'])) {
-                $contextOptions['http']['follow_location'] = true;
-            }
-        } else {
-            $contextOptions = ['http' => [
-                'timeout' => $timeoutSeconds,
-                'follow_location' => true
-            ]];
-        }
+    if ($contextOptions === null) {
+        $contextOptions = ['http' => []];
     }
+    if ($timeoutSeconds > 0) {
+        $contextOptions['http']['timeout'] = $timeoutSeconds;
+    }
+    if (!isset($contextOptions['http']['follow_location'])) {
+        $contextOptions['http']['follow_location'] = true;
+    }
+    $contextOptions['http']['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     return @file_get_contents(
         $url,
         0,
@@ -594,7 +590,8 @@ function str_replace_whole_words(string|array $search, string|array $replace, st
     return $subject;
 }
 
-function str_contains_ignore_diacritics(string $haystack, string $needle): bool {
+function str_contains_ignore_diacritics(string $haystack, string $needle): bool
+{
     $normalizedHaystack = remove_diacritics($haystack);
     $normalizedNeedle = remove_diacritics($needle);
     return mb_stripos($normalizedHaystack, $normalizedNeedle) !== false;
@@ -607,7 +604,8 @@ function str_contains_word(string $haystack, string $needle): bool
     return preg_match('/\b' . preg_quote($normalizedNeedle, '/') . '\b/ui', $normalizedHaystack) === 1;
 }
 
-function remove_diacritics(string $text): string {
+function remove_diacritics(string $text): string
+{
     $normalized = Normalizer::normalize($text, Normalizer::FORM_D);
     return preg_replace('/\p{Mn}/u', '', $normalized);
 }
