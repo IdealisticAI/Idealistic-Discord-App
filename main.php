@@ -345,8 +345,7 @@ $discord->on('ready', function (Discord $discord) {
         }
         $user = IdealisticOfficeTeamInitiator::findUser(
             IdealisticOfficeAccessPlatform::DISCORD,
-            $author->id,
-            $author->username
+            $author->id
         );
 
         if (!($user instanceof IdealisticOfficeUser)) {
