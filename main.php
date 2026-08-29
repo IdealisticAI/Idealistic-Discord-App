@@ -347,7 +347,7 @@ $discord->on('ready', function (Discord $discord) {
             IdealisticOfficeAccessPlatform::DISCORD,
             $author->id
         );
-        
+
         if ($user instanceof IdealisticOfficeOutcome) {
             $message->reply(
                 MessageBuilder::new()->setContent(
