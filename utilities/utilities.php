@@ -653,6 +653,30 @@ function get_keys_from_file(string $file, int $amount = 1, bool $custom = false)
     }
 }
 
+function verify_hmac_sha256_signature(
+    string  $payload,
+    ?string $secret,
+    ?string $signatureHeader,
+    string  $prefix = "sha256="
+): bool
+{
+    if (empty($secret)
+        || empty($signatureHeader)
+        || !str_starts_with($signatureHeader, $prefix)) {
+        return false;
+    }
+    $expected = hash_hmac("sha256", $payload, $secret);
+    return hash_equals($expected, substr($signatureHeader, strlen($prefix)));
+}
+
+function verify_shared_secret(?string $secret, ?string $value): bool
+{
+    if (empty($secret) || empty($value)) {
+        return false;
+    }
+    return hash_equals($secret, $value);
+}
+
 function strpos_array(string $haystack, array $needle): bool|int
 {
     foreach ($needle as $what) {
