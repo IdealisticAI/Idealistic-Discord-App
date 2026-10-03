@@ -13,9 +13,13 @@ require '/root/idealistic_discord/utilities/sql.php';
 require '/root/idealistic_discord/utilities/communication.php';
 require '/root/idealistic_discord/utilities/evaluator.php';
 
+use Discord\Builders\CommandBuilder;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\Parts\Channel\Message;
+use Discord\Parts\Interactions\Command\Option;
+use Discord\Parts\Interactions\Interaction;
+use Discord\Parts\Thread\Thread;
 use Discord\Parts\User\Member;
 use Discord\Parts\User\User;
 use Discord\WebSockets\Event;
@@ -309,7 +313,77 @@ $discord->on('ready', function (Discord $discord) {
 
     // Separator
 
-    $discord->on(Event::GUILD_MEMBER_ADD, function (Member $member, Discord $discord) {
+    $discord->application->commands->save(
+        $discord->application->commands->create(
+            CommandBuilder::new()
+                ->setName("idealistic-setup")
+                ->setDescription("Install a portal in this channel or thread.")
+                ->setDefaultMemberPermissions(1 << 5) // Manage Server
+                ->setDmPermission(false)
+                ->addOption(
+                    (new Option($discord))
+                        ->setName("portal")
+                        ->setDescription("The ID of the portal to install.")
+                        ->setType(Option::STRING)
+                        ->setRequired(true)
+                )
+                ->toArray()
+        )
+    );
+    $discord->application->commands->save(
+        $discord->application->commands->create(
+            CommandBuilder::new()
+                ->setName("idealistic-remove")
+                ->setDescription("Uninstall the portal of this channel or thread.")
+                ->setDefaultMemberPermissions(1 << 5) // Manage Server
+                ->setDmPermission(false)
+                ->toArray()
+        )
+    );
+
+    $discord->listenCommand("idealistic-setup", function (Interaction $interaction) {
+        $interaction->acknowledgeWithResponse(true)->done(function () use ($interaction) {
+            $channel = $interaction->channel;
+            $isThread = $channel instanceof Thread;
+            $outcome = IdealisticOfficePortalIndependent::installPortal(
+                IdealisticOfficeAccessPlatform::DISCORD,
+                $interaction->data->options->get("name", "portal")?->value,
+                $interaction->user?->id,
+                $interaction->guild_id,
+                $isThread ? $channel->parent_id : $interaction->channel_id,
+                $isThread ? $channel->id : null,
+                null
+            );
+            $interaction->updateOriginalResponse(
+                MessageBuilder::new()->setContent(
+                    $outcome->getTranslatedMessage()
+                )
+            );
+        });
+    });
+
+    $discord->listenCommand("idealistic-remove", function (Interaction $interaction) {
+        $interaction->acknowledgeWithResponse(true)->done(function () use ($interaction) {
+            $channel = $interaction->channel;
+            $isThread = $channel instanceof Thread;
+            $outcome = IdealisticOfficePortalIndependent::uninstallPortal(
+                IdealisticOfficeAccessPlatform::DISCORD,
+                $interaction->user?->id,
+                $interaction->guild_id,
+                $isThread ? $channel->parent_id : $interaction->channel_id,
+                $isThread ? $channel->id : null
+            );
+            $interaction->updateOriginalResponse(
+                MessageBuilder::new()->setContent(
+                    $outcome->getTranslatedMessage()
+                )
+            );
+        });
+    });
+
+    // Separator
+
+    $discord->on(Event::GUILD_MEMBER_ADD,function (Member $member, Discord $discord) {
         $member->setNickname(".");
     });
 
