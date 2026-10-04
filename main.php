@@ -16,10 +16,11 @@ require '/root/idealistic_discord/utilities/evaluator.php';
 use Discord\Builders\CommandBuilder;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
+use Discord\Parts\Channel\Channel;
 use Discord\Parts\Channel\Message;
+use Discord\Parts\Interactions\Command\Choice;
 use Discord\Parts\Interactions\Command\Option;
 use Discord\Parts\Interactions\Interaction;
-use Discord\Parts\Thread\Thread;
 use Discord\Parts\User\Member;
 use Discord\Parts\User\User;
 use Discord\WebSockets\Event;
@@ -35,6 +36,50 @@ if (!empty($files)) {
     foreach ($files as $path) {
         require $path;
     }
+}
+
+function portal_scope_option(Discord $discord): Option
+{
+    return (new Option($discord))
+        ->setName("scope")
+        ->setDescription("In a thread, target it or its parent. Defaults to parent in forums, thread elsewhere.")
+        ->setType(Option::STRING)
+        ->setRequired(false)
+        ->addChoice(Choice::new($discord, "This thread", "thread"))
+        ->addChoice(Choice::new($discord, "Parent channel (all threads)", "parent"));
+}
+
+// Returns [channel_id, thread_id] based on the raw interaction payload, since the
+// cached channel object misses threads that aren't in cache (archived, private, etc.)
+function portal_location(Interaction $interaction): array
+{
+    $raw = $interaction->getRawAttributes()["channel"] ?? null;
+    $isThread = $raw !== null
+        && isset($raw->parent_id)
+        && in_array($raw->type ?? null, array(
+            Channel::TYPE_ANNOUNCEMENT_THREAD,
+            Channel::TYPE_PUBLIC_THREAD,
+            Channel::TYPE_PRIVATE_THREAD
+        ));
+
+    if (!$isThread) {
+        return array($interaction->channel_id, null);
+    }
+    $scope = $interaction->data->options?->get("name", "scope")?->value;
+
+    if ($scope === null) {
+        // Forum/media posts are threads by nature, so default to the whole parent channel
+        $parent = $interaction->guild?->channels->get("id", $raw->parent_id);
+        $scope = in_array($parent?->type, array(
+            Channel::TYPE_GUILD_FORUM,
+            16 // Media channel, no constant in this DiscordPHP version
+        ), true) ? "parent" : "thread";
+    }
+
+    if ($scope === "parent") {
+        return array($raw->parent_id, null);
+    }
+    return array($raw->parent_id, $interaction->channel_id);
 }
 
 global $token;
@@ -314,6 +359,7 @@ $discord->on('ready', function (Discord $discord) {
                         ->setType(Option::STRING)
                         ->setRequired(true)
                 )
+                ->addOption(portal_scope_option($discord))
                 ->toArray()
         )
     );
@@ -324,21 +370,21 @@ $discord->on('ready', function (Discord $discord) {
                 ->setDescription("Uninstall the portal of this channel or thread.")
                 ->setDefaultMemberPermissions(1 << 4) // Manage Channels
                 ->setDmPermission(false)
+                ->addOption(portal_scope_option($discord))
                 ->toArray()
         )
     );
 
     $discord->listenCommand("idealistic-setup", function (Interaction $interaction) {
         $interaction->acknowledgeWithResponse(true)->done(function () use ($interaction) {
-            $channel = $interaction->channel;
-            $isThread = $channel instanceof Thread;
+            [$channelId, $threadId] = portal_location($interaction);
             $outcome = IdealisticOfficePortalIndependent::installPortal(
                 IdealisticOfficeAccessPlatform::DISCORD,
                 $interaction->data->options->get("name", "portal")?->value,
                 $interaction->user?->id,
                 $interaction->guild_id,
-                $isThread ? $channel->parent_id : $interaction->channel_id,
-                $isThread ? $channel->id : null,
+                $channelId,
+                $threadId,
                 null
             );
             $interaction->updateOriginalResponse(
@@ -351,14 +397,13 @@ $discord->on('ready', function (Discord $discord) {
 
     $discord->listenCommand("idealistic-remove", function (Interaction $interaction) {
         $interaction->acknowledgeWithResponse(true)->done(function () use ($interaction) {
-            $channel = $interaction->channel;
-            $isThread = $channel instanceof Thread;
+            [$channelId, $threadId] = portal_location($interaction);
             $outcome = IdealisticOfficePortalIndependent::uninstallPortal(
                 IdealisticOfficeAccessPlatform::DISCORD,
                 $interaction->user?->id,
                 $interaction->guild_id,
-                $isThread ? $channel->parent_id : $interaction->channel_id,
-                $isThread ? $channel->id : null
+                $channelId,
+                $threadId
             );
             $interaction->updateOriginalResponse(
                 MessageBuilder::new()->setContent(
