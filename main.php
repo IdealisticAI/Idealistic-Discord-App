@@ -51,19 +51,6 @@ $discord = new Discord([
 $discord->on('ready', function (Discord $discord) {
     $queue = array();
 
-    foreach ($discord->guilds as $guild) {
-        if (!empty($guild->members->first())) {
-            foreach ($guild->members as $member) {
-                if ($member->id !== $discord->id
-                    && !$member->getPermissions()?->administrator
-                    && $member->displayname !== "."
-                    && !str_starts_with($member->displayname, ".#")) {
-                    $member->setNickname(".");
-                }
-            }
-        }
-    }
-
     // Separator
 
     $discord->getLoop()->addPeriodicTimer(
@@ -379,12 +366,6 @@ $discord->on('ready', function (Discord $discord) {
                 )
             );
         });
-    });
-
-    // Separator
-
-    $discord->on(Event::GUILD_MEMBER_ADD,function (Member $member, Discord $discord) {
-        $member->setNickname(".");
     });
 
     // Separator
