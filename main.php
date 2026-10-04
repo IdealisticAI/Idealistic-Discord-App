@@ -318,7 +318,7 @@ $discord->on('ready', function (Discord $discord) {
             CommandBuilder::new()
                 ->setName("idealistic-setup")
                 ->setDescription("Install a portal in this channel or thread.")
-                ->setDefaultMemberPermissions(1 << 5) // Manage Server
+                ->setDefaultMemberPermissions(1 << 4) // Manage Channels
                 ->setDmPermission(false)
                 ->addOption(
                     (new Option($discord))
@@ -335,7 +335,7 @@ $discord->on('ready', function (Discord $discord) {
             CommandBuilder::new()
                 ->setName("idealistic-remove")
                 ->setDescription("Uninstall the portal of this channel or thread.")
-                ->setDefaultMemberPermissions(1 << 5) // Manage Server
+                ->setDefaultMemberPermissions(1 << 4) // Manage Channels
                 ->setDmPermission(false)
                 ->toArray()
         )
