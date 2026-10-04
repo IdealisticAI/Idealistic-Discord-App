@@ -42,16 +42,16 @@ function portal_scope_option(Discord $discord): Option
 {
     return (new Option($discord))
         ->setName("scope")
-        ->setDescription("In a thread, target it or its parent. Defaults to parent in forums, thread elsewhere.")
+        ->setDescription("Target this channel/thread or its parent. Defaults to the parent in forum posts.")
         ->setType(Option::STRING)
         ->setRequired(false)
-        ->addChoice(Choice::new($discord, "This thread", "thread"))
+        ->addChoice(Choice::new($discord, "This channel/thread", "current"))
         ->addChoice(Choice::new($discord, "Parent channel (all threads)", "parent"));
 }
 
-// Returns [channel_id, thread_id] based on the raw interaction payload, since the
-// cached channel object misses threads that aren't in cache (archived, private, etc.)
-function portal_location(Interaction $interaction): array
+// Returns "channel", "thread" or "forum_post" based on the raw interaction payload, since
+// the cached channel object misses threads that aren't in cache (archived, private, etc.)
+function portal_context(Interaction $interaction): string
 {
     $raw = $interaction->getRawAttributes()["channel"] ?? null;
     $isThread = $raw !== null
@@ -63,23 +63,34 @@ function portal_location(Interaction $interaction): array
         ));
 
     if (!$isThread) {
+        return "channel";
+    }
+    $parent = $interaction->guild?->channels->get("id", $raw->parent_id);
+    return in_array($parent?->type, array(
+        Channel::TYPE_GUILD_FORUM,
+        16 // Media channel, no constant in this DiscordPHP version
+    ), true) ? "forum_post" : "thread";
+}
+
+// Returns [channel_id, thread_id]
+function portal_location(Interaction $interaction): array
+{
+    $context = portal_context($interaction);
+
+    if ($context === "channel") {
         return array($interaction->channel_id, null);
     }
+    $parentId = $interaction->getRawAttributes()["channel"]->parent_id;
     $scope = $interaction->data->options?->get("name", "scope")?->value;
 
     if ($scope === null) {
-        // Forum/media posts are threads by nature, so default to the whole parent channel
-        $parent = $interaction->guild?->channels->get("id", $raw->parent_id);
-        $scope = in_array($parent?->type, array(
-            Channel::TYPE_GUILD_FORUM,
-            16 // Media channel, no constant in this DiscordPHP version
-        ), true) ? "parent" : "thread";
+        $scope = $context === "forum_post" ? "parent" : "thread";
     }
 
     if ($scope === "parent") {
-        return array($raw->parent_id, null);
+        return array($parentId, null);
     }
-    return array($raw->parent_id, $interaction->channel_id);
+    return array($parentId, $interaction->channel_id);
 }
 
 global $token;
