@@ -122,10 +122,11 @@ function portal_run(Message $message, Discord $discord): void
     $author = $message->author;
 
     if ($author === null
-        || $author->bot
-        || $message->mentions->get("id", $discord->id) === null) {
+        || $author->bot) {
         return;
     }
+    // Only tagged messages get a reply, the others are kept as history
+    $isTagged = $message->mentions->get("id", $discord->id) !== null;
     $content = trim(preg_replace("/<@!?" . $discord->id . ">/", "", $message->content ?? ""));
 
     if ($content === "") {
@@ -149,9 +150,14 @@ function portal_run(Message $message, Discord $discord): void
         $isThread ? $message->channel_id : null,
         $message->id,
         $content,
-        null
+        null,
+        false,
+        $isTagged
     );
 
+    if (!$isTagged) {
+        return;
+    }
     if ($outcome->isPositiveOutcome()) {
         portal_typing($discord, $message->channel_id);
         PortalTyping::$targets[(string)$message->channel_id] = time() + PortalTyping::MAX_SECONDS;
