@@ -558,6 +558,13 @@ $discord->on('ready', function (Discord $discord) {
     );
 
     $discord->listenCommand("idealistic-setup", function (Interaction $interaction) {
+        if ($interaction->guild_id === null) {
+            $interaction->respondWithMessage(
+                MessageBuilder::new()->setContent("This command can only be used in groups."),
+                true
+            );
+            return;
+        }
         $interaction->acknowledgeWithResponse(true)->done(function () use ($interaction) {
             [$channelId, $threadId] = portal_location($interaction);
             $outcome = IdealisticOfficePortalIndependent::installPortal(
@@ -578,6 +585,13 @@ $discord->on('ready', function (Discord $discord) {
     });
 
     $discord->listenCommand("idealistic-remove", function (Interaction $interaction) {
+        if ($interaction->guild_id === null) {
+            $interaction->respondWithMessage(
+                MessageBuilder::new()->setContent("This command can only be used in groups."),
+                true
+            );
+            return;
+        }
         $interaction->acknowledgeWithResponse(true)->done(function () use ($interaction) {
             [$channelId, $threadId] = portal_location($interaction);
             $outcome = IdealisticOfficePortalIndependent::uninstallPortal(
