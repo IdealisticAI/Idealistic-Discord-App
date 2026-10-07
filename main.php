@@ -21,6 +21,7 @@ use Discord\Parts\Channel\Message;
 use Discord\Parts\Interactions\Command\Choice;
 use Discord\Parts\Interactions\Command\Option;
 use Discord\Parts\Interactions\Interaction;
+use Discord\Parts\Thread\Thread;
 use Discord\Parts\User\Member;
 use Discord\Parts\User\User;
 use Discord\WebSockets\Event;
@@ -93,6 +94,133 @@ function portal_location(Interaction $interaction): array
     return array($parentId, $interaction->channel_id);
 }
 
+// Channels/threads where the bot shows "typing..." until the portal's reply is delivered
+class PortalTyping
+{
+    public const
+        REFRESH_SECONDS = 8, // Discord clears typing after ~10 seconds
+        MAX_SECONDS = 60; // Matches the time replies remain deliverable
+
+    public static array $targets = array();
+}
+
+// Guild messages only reach the portal installed in their channel/thread when the bot is tagged, never the author's assistant
+function portal_run(Message $message, Discord $discord): void
+{
+    $author = $message->author;
+
+    if ($author === null
+        || $author->bot
+        || $message->mentions->get("id", $discord->id) === null) {
+        return;
+    }
+    $content = trim(preg_replace("/<@!?" . $discord->id . ">/", "", $message->content ?? ""));
+
+    if ($content === "") {
+        return;
+    }
+    $channel = $message->channel;
+    $isThread = $channel !== null
+        && $channel->parent_id !== null
+        && in_array($channel->type, array(
+            Channel::TYPE_ANNOUNCEMENT_THREAD,
+            Channel::TYPE_PUBLIC_THREAD,
+            Channel::TYPE_PRIVATE_THREAD
+        ));
+    $outcome = IdealisticOfficePortalIndependent::runInstalledPortal(
+        IdealisticOfficeAccessPlatform::DISCORD,
+        $author->id,
+        $author->username,
+        $author->displayname,
+        $message->guild_id,
+        $isThread ? $channel->parent_id : $message->channel_id,
+        $isThread ? $message->channel_id : null,
+        $message->id,
+        $content,
+        null
+    );
+
+    if ($outcome->isPositiveOutcome()) {
+        if ($channel !== null) {
+            $channel->broadcastTyping();
+            PortalTyping::$targets[(string)$message->channel_id] = array($channel, time() + PortalTyping::MAX_SECONDS);
+        }
+    } else if ($outcome->getRawOutcome() === false) {
+        $message->reply(
+            MessageBuilder::new()->setContent(
+                $outcome->getTranslatedMessage()
+            )
+        );
+    }
+}
+
+// Sends the builders in order, the first as a reply to the triggering message when it still exists
+function portal_send(Channel|Thread $target, int|string|null $replyToId, array $builders): void
+{
+    $builder = array_shift($builders);
+
+    if ($builder === null) {
+        return;
+    }
+    $send = $replyToId === null
+        ? $target->sendMessage($builder)
+        : $target->messages->fetch($replyToId)->then(
+            fn(Message $message) => $message->reply($builder),
+            fn() => $target->sendMessage($builder)
+        );
+    $send->then(fn() => portal_send($target, null, $builders));
+}
+
+function portal_deliver(Channel $channel, IdealisticOfficePortalMessage $portalMessage): void
+{
+    unset(PortalTyping::$targets[(string)($portalMessage->getChannelThreadId() ?? $portalMessage->getChannelId())]);
+    $builders = array();
+
+    if ($portalMessage->hasMessage()) {
+        foreach (mb_str_split(
+            $portalMessage->getMessage(),
+            IdealisticOfficeLimit::MESSAGE_CHARACTER_LIMIT[IdealisticOfficeAccessPlatform::DISCORD]
+        ) as $piece) {
+            $builders[] = MessageBuilder::new()->setContent($piece);
+        }
+    }
+    $attachment = $portalMessage->getAttachment();
+
+    if ($attachment !== null
+        && $attachment->getFullBytes() <= IdealisticOfficeLimit::ATTACHMENT_BYTES_LIMIT[IdealisticOfficeAccessPlatform::DISCORD]) {
+        $data = $attachment->getDecodedData();
+
+        if ($data !== null) {
+            if (empty($builders)) {
+                $builders[] = MessageBuilder::new();
+            }
+            $builders[sizeof($builders) - 1]->addFileFromContent(
+                $attachment->getName(),
+                $data
+            );
+        }
+    }
+    if (empty($builders)) {
+        return;
+    }
+    $threadId = $portalMessage->getChannelThreadId();
+
+    if ($threadId === null) {
+        portal_send($channel, $portalMessage->getMessageId(), $builders);
+        return;
+    }
+    $thread = $channel->threads?->get("id", $threadId);
+
+    if ($thread !== null) {
+        portal_send($thread, $portalMessage->getMessageId(), $builders);
+    } else {
+        // Archived or otherwise uncached threads
+        $channel->threads?->fetch($threadId)->then(
+            fn(Thread $thread) => portal_send($thread, $portalMessage->getMessageId(), $builders)
+        );
+    }
+}
+
 global $token;
 $discord = new Discord([
     'token' => $token[0],
@@ -108,6 +236,19 @@ $discord->on('ready', function (Discord $discord) {
     $queue = array();
 
     // Separator
+
+    $discord->getLoop()->addPeriodicTimer(
+        PortalTyping::REFRESH_SECONDS,
+        function () {
+            foreach (PortalTyping::$targets as $key => $details) {
+                if (time() > $details[1]) {
+                    unset(PortalTyping::$targets[$key]);
+                } else {
+                    $details[0]->broadcastTyping();
+                }
+            }
+        }
+    );
 
     $discord->getLoop()->addPeriodicTimer(
         IdealisticOfficeLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
@@ -155,6 +296,25 @@ $discord->on('ready', function (Discord $discord) {
                             break;
                         }
                     }
+                }
+            }
+        }
+    );
+
+    $discord->getLoop()->addPeriodicTimer(
+        IdealisticOfficeLimit::EXTERNAL_APPLICATION_QUERY_SECONDS,
+        function () use ($discord) {
+            $portalMessages = IdealisticOfficePortalIndependent::getInstalledPortalMessages(IdealisticOfficeAccessPlatform::DISCORD);
+
+            if (!empty($portalMessages)) {
+                foreach ($portalMessages as $portalMessage) {
+                    $channel = $discord->getChannel($portalMessage->getChannelId());
+
+                    if (!($channel instanceof Channel)
+                        || !$portalMessage->process()) {
+                        continue;
+                    }
+                    portal_deliver($channel, $portalMessage);
                 }
             }
         }
@@ -374,6 +534,7 @@ $discord->on('ready', function (Discord $discord) {
                 ->toArray()
         )
     );
+
     $discord->application->commands->save(
         $discord->application->commands->create(
             CommandBuilder::new()
@@ -428,6 +589,7 @@ $discord->on('ready', function (Discord $discord) {
 
     $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) use (&$queue) {
         if ($message->member !== null) {
+            portal_run($message, $discord);
             return;
         }
         $author = $message->author;
