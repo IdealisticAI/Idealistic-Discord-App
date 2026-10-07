@@ -16,6 +16,7 @@ require '/root/idealistic_discord/utilities/evaluator.php';
 use Discord\Builders\CommandBuilder;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
+use Discord\Http\Endpoint;
 use Discord\Parts\Channel\Channel;
 use Discord\Parts\Channel\Message;
 use Discord\Parts\Interactions\Command\Choice;
@@ -104,6 +105,17 @@ class PortalTyping
     public static array $targets = array();
 }
 
+// Uses the channel ID directly, since the cached channel object can be missing (uncached channels/threads)
+function portal_typing(Discord $discord, int|string $channelId): void
+{
+    $discord->getHttpClient()->post(
+        Endpoint::bind(Endpoint::CHANNEL_TYPING, $channelId)
+    )->then(
+        null,
+        fn(Throwable $e) => IdealisticOfficeError::storeThrowable(null, null, $e)
+    );
+}
+
 // Guild messages only reach the portal installed in their channel/thread when the bot is tagged, never the author's assistant
 function portal_run(Message $message, Discord $discord): void
 {
@@ -141,10 +153,8 @@ function portal_run(Message $message, Discord $discord): void
     );
 
     if ($outcome->isPositiveOutcome()) {
-        if ($channel !== null) {
-            $channel->broadcastTyping();
-            PortalTyping::$targets[(string)$message->channel_id] = array($channel, time() + PortalTyping::MAX_SECONDS);
-        }
+        portal_typing($discord, $message->channel_id);
+        PortalTyping::$targets[(string)$message->channel_id] = time() + PortalTyping::MAX_SECONDS;
     } else if ($outcome->getRawOutcome() === false) {
         $message->reply(
             MessageBuilder::new()->setContent(
@@ -239,12 +249,12 @@ $discord->on('ready', function (Discord $discord) {
 
     $discord->getLoop()->addPeriodicTimer(
         PortalTyping::REFRESH_SECONDS,
-        function () {
-            foreach (PortalTyping::$targets as $key => $details) {
-                if (time() > $details[1]) {
-                    unset(PortalTyping::$targets[$key]);
+        function () use ($discord) {
+            foreach (PortalTyping::$targets as $channelId => $expiration) {
+                if (time() > $expiration) {
+                    unset(PortalTyping::$targets[$channelId]);
                 } else {
-                    $details[0]->broadcastTyping();
+                    portal_typing($discord, $channelId);
                 }
             }
         }
