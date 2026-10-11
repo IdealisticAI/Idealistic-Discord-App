@@ -19,6 +19,7 @@ use Discord\Discord;
 use Discord\Http\Endpoint;
 use Discord\Parts\Channel\Channel;
 use Discord\Parts\Channel\Message;
+use Discord\Parts\Embed\Embed;
 use Discord\Parts\Interactions\Command\Choice;
 use Discord\Parts\Interactions\Command\Option;
 use Discord\Parts\Interactions\Interaction;
@@ -187,18 +188,39 @@ function portal_send(Channel|Thread $target, int|string|null $replyToId, array $
     $send->then(fn() => portal_send($target, null, $builders));
 }
 
-function portal_deliver(Channel $channel, IdealisticOfficePortalMessage $portalMessage): void
+function portal_deliver(Discord $discord, Channel $channel, IdealisticOfficePortalMessage $portalMessage): void
 {
     unset(PortalTyping::$targets[(string)($portalMessage->getChannelThreadId() ?? $portalMessage->getChannelId())]);
     $builders = array();
 
+    $branding = $portalMessage->showsBranding();
+
     if ($portalMessage->hasMessage()) {
-        foreach (mb_str_split(
+        $pieces = mb_str_split(
             $portalMessage->getMessage(),
             IdealisticOfficeLimit::MESSAGE_CHARACTER_LIMIT[IdealisticOfficeAccessPlatform::DISCORD]
-        ) as $piece) {
-            $builders[] = MessageBuilder::new()->setContent($piece);
+        );
+        $last = sizeof($pieces) - 1;
+
+        foreach ($pieces as $index => $piece) {
+            if ($branding) {
+                $embed = new Embed($discord);
+                $embed->setDescription($piece);
+                $embed->setColor(IdealisticOfficeVariable::BRAND_COLOR);
+
+                if ($index === $last) {
+                    $embed->setFooter(IdealisticOfficeVariable::APPLICATION_NAME, IdealisticOfficeVariable::LOGO_URL);
+                }
+                $builders[] = MessageBuilder::new()->addEmbed($embed);
+            } else {
+                $builders[] = MessageBuilder::new()->setContent($piece);
+            }
         }
+    } else if ($branding && $portalMessage->hasAttachment()) {
+        $embed = new Embed($discord);
+        $embed->setColor(IdealisticOfficeVariable::BRAND_COLOR);
+        $embed->setFooter(IdealisticOfficeVariable::APPLICATION_NAME, IdealisticOfficeVariable::LOGO_URL);
+        $builders[] = MessageBuilder::new()->addEmbed($embed);
     }
     $attachment = $portalMessage->getAttachment();
 
@@ -330,7 +352,7 @@ $discord->on('ready', function (Discord $discord) {
                         || !$portalMessage->process()) {
                         continue;
                     }
-                    portal_deliver($channel, $portalMessage);
+                    portal_deliver($discord, $channel, $portalMessage);
                 }
             }
         }
